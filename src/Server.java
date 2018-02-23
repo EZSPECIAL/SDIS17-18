@@ -13,11 +13,17 @@ public class Server {
 	public static void main(String[] args) throws IOException {
 		
 		DatagramSocket socket = new DatagramSocket(Integer.parseInt(args[0]));
-		DatagramPacket data = new DatagramPacket();
+		
+		byte[] data = new byte[512];
+		DatagramPacket dataPacket = new DatagramPacket(data, 512);
 		
 		while(true) {
 			
-			socket.receive();
+			socket.receive(dataPacket);
+			System.out.println(dataPacket);
+			break;
 		}
+		
+		socket.close();
 	}
 }

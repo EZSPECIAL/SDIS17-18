@@ -1,3 +1,5 @@
+LAB01 (Unicast)
+
 datagram socket
 inet address
 	inet4
@@ -31,3 +33,15 @@ compareTo()
 
 state machine
 - send / wait / resend N times on timeout
+
+LAB02 (Multicast)
+
+MulticastSocket
+joinGroup(InetAddress) -> notify that client wants to receive multicast messages
+leaveGroup(InetAddress) -> leave multicast group
+setTimeToLive(int ttl)
+
+224.0.0.0
+239.255.255.255
+
+Server has to periodically send multicast message and then receive data, use Timer thread for multicast and main thread locks on receive()
