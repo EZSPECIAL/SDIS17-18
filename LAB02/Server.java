@@ -39,6 +39,7 @@ public class Server {
 			public void run() {
 
 				try {
+
 					socket.send(broadcastPacket);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
@@ -47,7 +48,23 @@ public class Server {
 			}
 		}, 0, 1000);
 
-		while(true);
-		//socket.close();
+		// Await database operations from clients
+		byte[] data = new byte[512];
+		DatagramSocket service = new DatagramSocket(Integer.parseInt(args[0])); // TODO remove magic number, validate input
+		DatagramPacket dataPacket = new DatagramPacket(data, data.length);
+		
+		System.out.println("Receiving...");
+		service.receive(dataPacket);
+		
+		// Convert packet to string and clean garbage characters
+		String msg = new String(dataPacket.getData());
+		msg = msg.trim();
+		System.out.println(msg);
+		
+		// Cancel Timer thread and close UDP sockets
+		multicast.cancel();
+		
+		service.close();
+		socket.close();
 	}
 }

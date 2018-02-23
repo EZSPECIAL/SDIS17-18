@@ -27,7 +27,7 @@ setData(bytes[])
 
 String.getBytes()
 String(bytes[])
-trim()
+trim() -> clean garbage on strings converted from datagram packets
 split()
 compareTo()
 

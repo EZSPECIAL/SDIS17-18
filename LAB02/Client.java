@@ -28,13 +28,31 @@ public class Client {
 		
 		multicast.receive(dataPacket);
 		
+		multicast.leaveGroup(group);
+		multicast.close();
+		
+		// Convert packet to string and clean garbage characters
 		String msg = new String(dataPacket.getData());
+		msg = msg.trim();
 		System.out.println(msg);
 		
-		multicast.close();
-	}
-	
-	private static void printError(String message) {
-		System.out.println("Client: " + message);
+		// TODO validate split results
+		String[] interRes = msg.split("/");
+		String[] result = interRes[1].split(":");
+		
+		InetAddress serviceAddr = InetAddress.getByName(result[0]);
+		Integer servicePort = Integer.parseInt(result[1]);
+		
+		System.out.println(serviceAddr);
+		System.out.println(servicePort);
+
+		// Send operation to server
+		String operation = "hello"; // TODO insert actual operations from LAB01
+		
+		DatagramSocket socket = new DatagramSocket();
+		DatagramPacket operationPacket = new DatagramPacket(operation.getBytes(), operation.getBytes().length, serviceAddr, servicePort);
+		
+		socket.send(operationPacket);
+		socket.close();
 	}
 }
