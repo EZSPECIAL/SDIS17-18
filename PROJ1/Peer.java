@@ -6,8 +6,16 @@ import java.util.Timer;
 
 public class Peer {
 
+	private static InetAddress mccAddr;
+	private static InetAddress mdbAddr;
+	private static InetAddress mdrAddr;
+
+	private static int mccPort;
+	private static int mdbPort;
+	private static int mdrPort;
+
 	/**
-	 * Runs a serverles backup service.
+	 * Runs a serverless backup service.
 	 * <br><br>
 	 * Usage: java Peer &lt;protocol version&gt; &lt;peer id&gt; &lt;service access point&gt; &lt;mcc_ip&gt; &lt;mcc_port&gt; &lt;mdb_ip&gt; &lt;mdb_port&gt; &lt;mdr_ip&gt; &lt;mdr_port&gt;
 	 * <br>
@@ -27,51 +35,52 @@ public class Peer {
 	 */
 	public static void main(String[] args) throws IOException {
 
-		// Parse argument number
-		if(args.length == 11) {
-			System.out.println("Initiator!");
-		} else if(args.length == 9) {
-			
-			System.out.println("Peer!");
-		} else {
-			System.out.println("Wrong argument number!");
-			System.exit(1);
-		}
-		
 		// Parse command line multicast IPs
 		InetAddress mccAddr = InetAddress.getByName(args[3]); // TODO remove magic number, validate input
 		InetAddress mdbAddr = InetAddress.getByName(args[5]); // TODO remove magic number, validate input
 		InetAddress mdrAddr = InetAddress.getByName(args[7]); // TODO remove magic number, validate input
-		
+
 		// Parse command line multicast ports
 		int mccPort = Integer.parseInt(args[4]);
 		int mdbPort = Integer.parseInt(args[6]);
 		int mdrPort = Integer.parseInt(args[8]);
 
-//		// Create UDP socket and build broadcast message
-//		DatagramSocket socket = new DatagramSocket();
-//
-//		InetAddress host = InetAddress.getLocalHost();
-//		String broadcast = host.toString() + ":" + args[0]; // TODO remove magic number, validate input
-//
-//		System.out.println(broadcast);
-//
-//		// Create packet and send it
-//		DatagramPacket broadcastPacket = new DatagramPacket(broadcast.getBytes(), broadcast.getBytes().length, bAddr, Integer.parseInt(args[2]));
+		// Check what type of peer was called
+		if(args.length == 11) {
+			System.out.println("BACK: Initiator peer started."); // TODO add more info
+			initPeer();
+		} else if(args.length == 9) {
+			System.out.println("BACK: Peer started."); // TODO add more info
+		} else {
+			System.out.println("Wrong number of arguments!");
+			System.exit(1);
+		}
 
-		String broadcast = "PUTCHUNK";
-		
+		//
+		//		// Cancel Timer thread and close UDP sockets
+		//		multicast.cancel();
+		//
+		//		service.close();
+		//		socket.close();
+	}
+
+	private static void initPeer() throws SocketException {
+
+		// Initialize socket and broadcast message
 		DatagramSocket socket = new DatagramSocket();
+		String broadcast = "PUTCHUNK";
 		DatagramPacket broadcastPacket = new DatagramPacket(broadcast.getBytes(), broadcast.getBytes().length, mdbAddr, mdbPort);
-		
-		Timer multicast = new Timer();
 
-		multicast.scheduleAtFixedRate(new TimerTask() {
+		// Repeat message every second
+		Timer repeatMsg = new Timer();
+
+		repeatMsg.scheduleAtFixedRate(new TimerTask() {
 			@Override
 			public void run() {
 
 				try {
 
+					System.out.println("INIT: sent \"" + broadcast +"\"");
 					socket.send(broadcastPacket);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
@@ -79,24 +88,21 @@ public class Peer {
 				}
 			}
 		}, 0, 1000);
+	}
 
-//		// Await database operations from clients
-//		byte[] data = new byte[512];
-//		DatagramSocket service = new DatagramSocket(Integer.parseInt(args[0])); // TODO remove magic number, validate input
-//		DatagramPacket dataPacket = new DatagramPacket(data, data.length);
-//
-//		System.out.println("Receiving...");
-//		service.receive(dataPacket);
-//
-//		// Convert packet to string and clean garbage characters
-//		String msg = new String(dataPacket.getData());
-//		msg = msg.trim();
-//		System.out.println(msg);
-//
-//		// Cancel Timer thread and close UDP sockets
-//		multicast.cancel();
-//
-//		service.close();
-//		socket.close();
+	private static void peer() throws IOException {
+
+		byte[] data = new byte[64000];
+		DatagramPacket dataPacket = new DatagramPacket(data, data.length, mdbAddr, mdbPort);
+
+		MulticastSocket multi = new MulticastSocket(mdbPort);
+		multi.joinGroup(mdbAddr);
+
+		System.out.println("Waiting");
+		multi.receive(dataPacket);
+
+		String msg = new String(dataPacket.getData());
+		msg = msg.trim();
+		System.out.println(msg);
 	}
 }
