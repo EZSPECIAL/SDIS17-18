@@ -3,7 +3,6 @@ import java.util.TimerTask;
 import java.net.*;
 import java.util.Timer;
 
-
 public class Peer {
 
 	private static InetAddress mccAddr;
@@ -51,6 +50,7 @@ public class Peer {
 			initPeer();
 		} else if(args.length == 9) {
 			System.out.println("BACK: Peer started."); // TODO add more info
+			peer();
 		} else {
 			System.out.println("Wrong number of arguments!");
 			System.exit(1);
@@ -68,8 +68,10 @@ public class Peer {
 
 		// Initialize socket and broadcast message
 		DatagramSocket socket = new DatagramSocket();
-		String broadcast = "PUTCHUNK";
-		DatagramPacket broadcastPacket = new DatagramPacket(broadcast.getBytes(), broadcast.getBytes().length, mdbAddr, mdbPort);
+		ServiceMessage msg = new ServiceMessage();
+		msg.putChunk("1.0", "1", "blah", "0", "2");
+		
+		DatagramPacket broadcastPacket = new DatagramPacket(msg.getMessage().getBytes(), msg.getMessage().getBytes().length, mdbAddr, mdbPort);
 
 		// Repeat message every second
 		Timer repeatMsg = new Timer();
@@ -80,7 +82,7 @@ public class Peer {
 
 				try {
 
-					System.out.println("INIT: sent \"" + broadcast +"\"");
+					System.out.println("INIT: sent \"" + msg.getMessage() +"\"");
 					socket.send(broadcastPacket);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
@@ -104,5 +106,7 @@ public class Peer {
 		String msg = new String(dataPacket.getData());
 		msg = msg.trim();
 		System.out.println(msg);
+		
+		multi.close();
 	}
 }

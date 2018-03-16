@@ -1,1 +1,1 @@
-javac Peer.java
+javac *.java
