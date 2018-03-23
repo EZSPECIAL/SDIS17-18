@@ -1,0 +1,30 @@
+Threading
+
+Version 1
+    - one protocol instance at a time
+    - one thread for each peer
+
+Version 2
+    - one protocol instance at a time
+    - one thread per channel (control, backup, restore)
+    - msg thread is endless loop of receive -> process
+    - multicaster thread (thread.sleep() for timeout), created for TestApp, terminated on protocol finish
+    - TestApp RMI creates multicaster thread to handle protocol invoked
+    - multicaster and control channel thread need to share received STORED, use locks
+    - non-initiator peers don't need to handle STORED but could since the code is already there
+    
+Version 3
+    - multiple multicaster instances on any Peer, handle 1 protocol
+    - one thread per channel, keeping protocol instances state in objects
+    - initiator creates object on transmit, receiver on receive
+    - java.util.concurrent.ConcurrentHashMap to store protocol state
+    
+Version 4
+    - receiver threads now use worker threads for processing so that they can keep listening
+    - java.util.concurrent.ThreadPoolExecutor
+    
+Version 5
+    - no thread.sleep() with java.util.concurrent.ScheduledThreadPoolExecutor which allows a "timeout" handler
+    
+Version 6
+    - I/O concurrency with java.nio.channels.AsynchronousFileChannel
