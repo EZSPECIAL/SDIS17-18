@@ -1,4 +1,17 @@
-Threading
+---------------------
+RUNNING
+---------------------
+
+    - protocol version
+    - server id
+    - service access point
+    - mc
+    - mdb
+    - mdr
+
+---------------------
+THREADING
+---------------------
 
 Version 1
     - one protocol instance at a time
@@ -12,19 +25,99 @@ Version 2
     - TestApp RMI creates multicaster thread to handle protocol invoked
     - multicaster and control channel thread need to share received STORED, use locks
     - non-initiator peers don't need to handle STORED but could since the code is already there
-    
+
 Version 3
     - multiple multicaster instances on any Peer, handle 1 protocol
     - one thread per channel, keeping protocol instances state in objects
     - initiator creates object on transmit, receiver on receive
     - java.util.concurrent.ConcurrentHashMap to store protocol state
-    
+
 Version 4
     - receiver threads now use worker threads for processing so that they can keep listening
     - java.util.concurrent.ThreadPoolExecutor
-    
+
 Version 5
     - no thread.sleep() with java.util.concurrent.ScheduledThreadPoolExecutor which allows a "timeout" handler
-    
+
 Version 6
     - I/O concurrency with java.nio.channels.AsynchronousFileChannel
+
+---------------------
+GENERAL
+---------------------
+    
+Peers
+    - identified by ID
+    
+Channels
+    - multicast control channel - control messages
+    - multicast data backup - backup protocol
+    - multicast data restore - restore protocol
+    - ip:port pair for each
+    
+Generic message
+    - header / body (data)
+    - 1+ space between fields
+    - 0+ spaces on last field
+    - header termination <CRLF><CRLF>
+    
+    - message type (protocol)
+    - version ("1.0")
+    - senderID (peer id)
+    - fileID (sha256 with last modified metadata, encoded as HEX to ASCII)
+    - chunkNo (start at 0, up to 6 digits)
+    - repDegree (1 to 9, store N copies in system)
+    
+    - body (file divided in 64K chunks identified by (fileID, chunkNo), last chunk has 0 to 63999 size)
+    
+---------------------
+PROTOCOLS
+---------------------
+
+Backup
+
+    Initiator
+    - MDB -> PUTCHUNK <Version> <SenderId> <FileId> <ChunkNo> <ReplicationDeg> <CRLF><CRLF><Body>
+    - a Peer must never store the chunks of its own files
+    - 1 sec to receive repDegree STORED else resends -> double the interval up to 5 times
+    - STORED must come from different Peers
+
+    Peers
+    - MC -> STORED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+    - random delay between 0 and 400ms
+
+Restore
+    - 
+    
+---------------------
+ENHANCEMENTS
+---------------------
+
+Backup
+    - ensure repDegree and keep interoperability
+
+TCP for enhancement
+
+    - ServerSocket - start TCP connection
+    - Socket - transfer data
+    - ServerSocket(int port)
+    - ServerSocket(int port, int backlog, InetAddress addr)
+    - Socket(InetAddress addr, int port)
+
+    - socket.accept() - wait for connection
+    - socket.close() / shutdownOutput()
+
+    - getInputStream() BufferedReader -> ReadLine()
+    - getOutputStream() PrintWriter -> println()
+    - ObjectInputStream() implements Serializable
+    - ObjectOutputStream() implements Serializable
+
+---------------------
+QUESTIONS
+---------------------
+
+backup file A and delete file A shortly after
+interoperability on enhanced versions (tcp objects)
+peer must never store its own chunks
+
+"A peer should also count the number of confirmation messages for each of the chunks it has stored and keep that count in non-volatile memory. This information can be useful if the peer runs out of disk space: in that event, the peer may try to free some space by evicting chunks whose actual replication degree is higher than the desired replication degree."
