@@ -1,0 +1,272 @@
+---------------------
+ORDER
+---------------------
+
+    - !!! 1st change where main() is and actually have Peer objects
+    - backup
+    - delete
+    - restore
+    - reclaim
+
+---------------------
+GRADE
+---------------------
+
+    - 70% (concurrent with all protocols)
+    - 15% - 5% per enhancement
+    - 5% - RMI
+    - 5% - concurrency model in report
+    - 5% - demo setup
+
+---------------------
+RUNNING (Peer)
+---------------------
+
+    - protocol version (!!! decides whether to use base messages or enhanced versions)
+    - server id
+    - service access point
+        - IP:port, can be just port if localhost (only for TCP / UDP)
+        - name of remote object that provides the "testing" service (if RMI)
+    - mc
+    - mdb
+    - mdr
+
+---------------------
+THREADING
+---------------------
+
+Version 1
+
+    - one protocol instance at a time
+    - one thread for each peer
+
+Version 2
+
+    - one protocol instance at a time
+    - one thread per channel (control, backup, restore)
+    - msg thread is endless loop of receive -> process
+    - multicaster thread (thread.sleep() for timeout), created for TestApp, terminated on protocol finish
+    - TestApp RMI creates multicaster thread to handle protocol invoked
+    - multicaster and control channel thread need to share received STORED, use locks
+    - non-initiator peers don't need to handle STORED but could since the code is already there
+
+Version 3
+
+    - multiple multicaster instances on any Peer, handle 1 protocol
+    - one thread per channel, keeping protocol instances state in objects
+    - initiator creates object on transmit, receiver on receive
+    - java.util.concurrent.ConcurrentHashMap to store protocol state
+
+Version 4
+
+    - receiver threads now use worker threads for processing so that they can keep listening
+    - java.util.concurrent.ThreadPoolExecutor
+
+Version 5
+
+    - no thread.sleep() with java.util.concurrent.ScheduledThreadPoolExecutor which allows a "timeout" handler
+
+Version 6
+
+    - I/O concurrency with java.nio.channels.AsynchronousFileChannel
+
+---------------------
+GENERAL
+---------------------
+
+Peers
+
+    - identified by ID
+    - have a local folder that serves as their virtual HDD
+
+Channels
+
+    - multicast control channel - control messages
+    - multicast data backup - backup protocol
+    - multicast data restore - restore protocol
+    - ip:port pair for each
+
+Generic message
+
+    - header / body (data)
+    - 1+ space between fields
+    - 0+ spaces on last field
+    - header termination <CRLF><CRLF>
+    - new/modified messages can have more header fields, ignore them in parser
+    - drop any unrecognized message
+
+    - message type (protocol)
+    - version ("1.0")
+    - senderID (peer id)
+    - fileID (sha256 with last modified metadata, encoded as HEX to ASCII)
+    - chunkNo (start at 0, up to 6 digits)
+    - repDegree (1 to 9, store N copies in system)
+
+    - body (file divided in 64K chunks identified by (fileID, chunkNo), last chunk has 0 to 63999 size)
+
+---------------------
+PROTOCOLS
+---------------------
+
+Backup
+
+    Initiator
+    - MDB -> PUTCHUNK <Version> <SenderId> <FileId> <ChunkNo> <ReplicationDeg> <CRLF><CRLF><Body>
+    - a Peer must never store the chunks of its own files
+    - 1 sec to receive repDegree STORED else resends -> double the interval up to 5 times
+    - STORED must come from different Peers
+
+    Peers
+    - MC -> STORED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+    - random delay between 0 and 400ms
+
+Restore
+
+    Initiator
+    - MC -> GETCHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+    
+    Peers (that have the file-chunk)
+    - MDR -> CHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF><Body>
+    - random delay between 0 and 400ms
+
+Delete
+
+    Initiator
+    - MC -> DELETE <Version> <SenderId> <FileId> <CRLF><CRLF>
+    - all peers delete their chunks of the file
+    - send N times to ensure reception of message
+
+Reclaim
+
+    Initiator
+    - MC -> REMOVED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+    - Peers receiving this message that have the chunk update the local repDeg count
+    - If repDeg count is below desired for that chunk, starts Backup protocol with delay (0 to 400ms)
+    - If during 0 to 400ms delay a PUTCHUNK for the same chunk is received, abort
+
+---------------------
+REPORT
+---------------------
+
+    - 1 page per enhancement (backup, restore, delete)
+    - 2-3 pages for concurrency model
+
+---------------------
+SETUP
+---------------------
+
+    - scripts for quick testing
+    - test PCs in lab, local and remote
+
+---------------------
+CLIENT
+---------------------
+
+    - Each Peer provides an interface for testing
+    - Can use TCP, UDP or RMI (RMI is worth 5% more)
+
+    Backup -> pathname / repDeg
+    Restore -> pathname
+    Delete -> pathname
+    Local disk space -> max KB that can be used, 0 reclaims all
+    Get info ->
+            For each file Peer has initiated backup of
+                - file pathname
+                - backup file service ID
+                - desired repDeg
+            For each chunk of the file
+                - id
+                - perceived repDeg
+            For each chunk it stores
+                - id
+                - size in KB
+                - perceived repDeg
+            Curr KB used / max KB possible
+
+---------------------
+CLIENT APP (TestApp)
+---------------------
+
+    - peer_ap - access point
+    - sub_protocol - (backup, restore, delete, reclaim) append ENH if enhanced, send STATE for Peer info
+    - opnd_1 - pathname, max KB if reclaim, state has no operands
+    - opnd_2 - repDeg if backup
+
+---------------------
+ENHANCEMENTS
+---------------------
+
+Backup
+
+    - ensure repDegre
+    - keep interoperability
+
+Restore (using TCP)
+
+    - ServerSocket - start TCP connection
+    - Socket - transfer data
+    - ServerSocket(int port)
+    - ServerSocket(int port, int backlog, InetAddress addr)
+    - Socket(InetAddress addr, int port)
+
+    - socket.accept() - wait for connection
+    - socket.close() / shutdownOutput()
+
+    - getInputStream() BufferedReader -> ReadLine()
+    - getOutputStream() PrintWriter -> println()
+    - ObjectInputStream() implements Serializable
+    - ObjectOutputStream() implements Serializable
+
+Delete
+
+    - delete chunks even if Peer is currently offline
+
+If adding messages
+
+    - add a new header line
+    - change protocol version to 1.1+
+
+---------------------
+EXTRAS
+---------------------
+
+    - every protocol playing nice with each other
+
+---------------------
+QUESTIONS
+---------------------
+
+Concurrent protocols - restore a file that's being backed up, delete file being backed up, etc
+
+Client: each Peer is running RMI? How to distinguish in "access point" parameter?
+
+Client: chunks occupy more space than allowed, does the Peer delete random chunks and send "REMOVED" msgs?
+
+Client: what's the "backup service id of the file"? SHA256 generated?
+
+Client: what's the chunk id? SHA256 + chunkNo?
+
+Client: can ID and perceived repDeg vary between local chunks and overall chunks?
+
+TestApp: is this the RMI client?
+
+Backup enhancement (what if not enough peers? / what if no peers with space available?)
+
+"To avoid flooding the host with CHUNK messages, each peer shall wait for a random time uniformly distributed
+between 0 and 400 ms, before sending the CHUNK message. If it receives a CHUNK message before that time expires,
+it will not send the CHUNK message."
+(what does this mean exactly?)
+
+"A peer should also count the number of confirmation messages for each of the chunks it has stored and keep that
+count in non-volatile memory. This information can be useful if the peer runs out of disk space: in that event,
+the peer may try to free some space by evicting chunks whose actual replication degree is higher than the desired
+replication degree."
+(backup enhancement invalidates this?)
+
+Does deleting chunks trigger the "REMOVED" message or can only the Client trigger it by changing max space?
+
+RESTORE Enhancement general idea / interop (isn't TCP enough to solve it?)
+
+DELETE Enhancement general idea / interop
+(if deletion triggers "REMOVED" message, every Peer could keep where each chunk is located (Peer ID) and know that deletion
+ wasn't complete until every expected "REMOVED" msg arrived. However offline Peers would have deprecated file list)
