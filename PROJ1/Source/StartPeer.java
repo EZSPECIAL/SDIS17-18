@@ -25,7 +25,7 @@ public class StartPeer {
 	 *
 	 * @param args 1.  protocol version
 	 * @param args 2.  peer ID
-	 * @param args 3.  service access point
+	 * @param args 3.  service access point (RMI Object name)
 	 * @param args 4.  multicast control channel IP
 	 * @param args 5.  multicast control channel port
 	 * @param args 6.  multicast data backup IP

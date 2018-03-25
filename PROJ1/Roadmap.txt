@@ -2,8 +2,7 @@
 ORDER
 ---------------------
 
-    - Logfile handling
-    - RMI Client parsing
+    - Logfile handling / cmd parsing / peer creation
     - backup single thread / worst ever implementation
     - Swap to Linux!!!
     - delete
@@ -165,34 +164,20 @@ CLIENT
 ---------------------
 
     - Each Peer provides an interface for testing
-    - Can use TCP, UDP or RMI (RMI is worth 5% more)
 
-    Backup -> pathname / repDeg
-    Restore -> pathname
-    Delete -> pathname
-    Local disk space -> max KB that can be used, 0 reclaims all
     Get info ->
-            For each file Peer has initiated backup of
-                - file pathname
-                - backup file service ID
-                - desired repDeg
-            For each chunk of the file
-                - id
-                - perceived repDeg
-            For each chunk it stores
-                - id
-                - size in KB
-                - perceived repDeg
-            Curr KB used / max KB possible
-
----------------------
-CLIENT APP (TestApp)
----------------------
-
-    - peer_ap - access point
-    - sub_protocol - (backup, restore, delete, reclaim) append ENH if enhanced, send STATE for Peer info
-    - opnd_1 - pathname, max KB if reclaim, state has no operands
-    - opnd_2 - repDeg if backup
+        For each file Peer has initiated backup of
+            - file pathname
+            - backup file service ID
+            - desired repDeg
+        For each chunk of the file
+            - id
+            - perceived repDeg
+        For each chunk it stores
+            - id
+            - size in KB
+            - perceived repDeg
+        Curr KB used / max KB possible
 
 ---------------------
 ENHANCEMENTS
@@ -240,8 +225,6 @@ QUESTIONS
 
 Concurrent protocols - restore a file that's being backed up, delete file being backed up, etc
 
-Client: each Peer is running RMI? How to distinguish in "access point" parameter?
-
 Client: chunks occupy more space than allowed, does the Peer delete random chunks and send "REMOVED" msgs?
 
 Client: what's the "backup service id of the file"? SHA256 generated?
@@ -250,9 +233,9 @@ Client: what's the chunk id? SHA256 + chunkNo?
 
 Client: can ID and perceived repDeg vary between local chunks and overall chunks?
 
-TestApp: is this the RMI client?
+Client: always localhost?
 
-TestApp: always localhost?
+Client: why append "ENH" when Peers already have protocol version to know whether they're running enhancements or not
 
 RMI: sometimes Enter key is needed for output to appear in Peer/Server
 

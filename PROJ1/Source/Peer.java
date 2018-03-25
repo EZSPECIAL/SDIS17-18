@@ -9,32 +9,51 @@ public class Peer implements RMITesting {
 	
 	@Override
 	public void remoteBackup(String filepath, int repDeg) throws RemoteException {
-		// TODO Auto-generated method stub
-		System.out.println(filepath + " | " + repDeg);
+		
+		// TODO backup protocol
+		// TODO proper log message
+		
+		System.out.println("backup: " + filepath + " | " + repDeg);
 		return;
 	}
 
 	@Override
 	public void remoteRestore(String filepath) throws RemoteException {
-		// TODO Auto-generated method stub
+		
+		// TODO restore protocol
+		// TODO proper log message
+		
+		System.out.println("restore: " + filepath);
 		return;
 	}
 
 	@Override
 	public void remoteDelete(String filepath) throws RemoteException {
-		// TODO Auto-generated method stub
+		
+		// TODO delete protocol
+		// TODO proper log message
+		
+		System.out.println("delete: " + filepath);
 		return;
 	}
 
 	@Override
-	public void remoteSetDiskSpace(int maxKB) throws RemoteException {
-		// TODO Auto-generated method stub
+	public void remoteReclaim(int maxKB) throws RemoteException {
+		
+		// TODO reclaim protocol
+		// TODO proper log message
+		
+		System.out.println("reclaim: " + maxKB);
 		return;
 	}
 
 	@Override
 	public String remoteGetInfo() throws RemoteException {
-		// TODO Auto-generated method stub
+		
+		// TODO info protocol
+		// TODO proper log message
+		
+		System.out.println("info");
 		return null;
 	}
 
