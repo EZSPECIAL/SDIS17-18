@@ -269,6 +269,8 @@ Does deleting chunks trigger the "REMOVED" message or can only the Client trigge
 
 RESTORE Enhancement general idea / interop (isn't TCP enough to solve it?)
 
+Offline Peer - doesn't this mean it loses all info? How can the delete enhancement work?
+
 DELETE Enhancement general idea / interop
 (if deletion triggers "REMOVED" message, every Peer could keep where each chunk is located (Peer ID) and know that deletion
- wasn't complete until every expected "REMOVED" msg arrived. However offline Peers would have deprecated file list)
+ wasn't complete until every expected "REMOVED" msg arrived. However offline Peers would have deprecated file list, don't see a way without new messages/protocol for keeping filelist updated)
