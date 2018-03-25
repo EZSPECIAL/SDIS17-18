@@ -1,9 +1,17 @@
+import java.io.File;
 import java.io.IOException;
 import java.util.TimerTask;
 import java.net.*;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Timer;
 
 public class StartPeer {
@@ -15,7 +23,36 @@ public class StartPeer {
 	private static int mccPort;
 	private static int mdbPort;
 	private static int mdrPort;
+	
+	private static final String logFolder = "logFiles";
+	private static final String logPrefix = "PeerLog_";
 
+	private static StartPeer singleton = new StartPeer();
+
+	private StartPeer() {}
+	
+	public static StartPeer getInstance( ) {
+		return singleton;
+	}
+	
+	public void printToLog(int PeerID, String message) {
+		
+		String filepath = "./" + logFolder + "/" + logPrefix + PeerID + ".txt";
+		
+		List<String> lines = Arrays.asList(message);
+		Path file = Paths.get(filepath);
+		
+		File createFile = new File(filepath);
+		
+		try {
+			createFile.createNewFile();
+			Files.write(file, lines, Charset.forName("UTF-8"), StandardOpenOption.APPEND);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+	}
+	
 	/**
 	 * Runs a serverless backup service.
 	 * <br><br>
@@ -37,6 +74,11 @@ public class StartPeer {
 	 */
 	public static void main(String[] args) throws IOException {
 
+	    File directory = new File(logFolder);
+	    if(!directory.exists()) {
+	        directory.mkdir();
+	    }
+		
 		System.setProperty("java.net.preferIPv4Stack", "true");
 		
 		// Parse command line multicast IPs
@@ -128,6 +170,14 @@ public class StartPeer {
 		System.out.println("Waiting");
 		multi.receive(dataPacket);
 
+		System.out.println("size: " + dataPacket.getLength());
+		System.out.println("offset: " + dataPacket.getOffset());
+		
+		for(byte datas : dataPacket.getData()) {
+			
+			System.out.print(datas);
+		}
+		
 		String msg = new String(dataPacket.getData());
 		msg = msg.trim();
 		System.out.println(msg);

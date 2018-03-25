@@ -1,2 +1,2 @@
-java TestApp Peer1 "<protocol>" "<opnd1>" "<opnd2>"
+java TestApp Peer1 backup TestApp.java 1
 PAUSE

@@ -13,7 +13,9 @@ public class Peer implements RMITesting {
 		// TODO backup protocol
 		// TODO proper log message
 		
-		System.out.println("backup: " + filepath + " | " + repDeg);
+		String msg = "backup: " + filepath + " | " + repDeg;
+		System.out.println(msg);
+		StartPeer.getInstance().printToLog(1, msg);
 		return;
 	}
 
