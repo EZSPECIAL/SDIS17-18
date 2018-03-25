@@ -1,112 +1,41 @@
-import java.io.IOException;
-import java.util.TimerTask;
-import java.net.*;
-import java.util.Timer;
+import java.rmi.RemoteException;
 
-public class Peer {
-
-	private static InetAddress mccAddr;
-	private static InetAddress mdbAddr;
-	private static InetAddress mdrAddr;
-
-	private static int mccPort;
-	private static int mdbPort;
-	private static int mdrPort;
+public class Peer implements RMITesting {
 
 	/**
-	 * Runs a serverless backup service.
-	 * <br><br>
-	 * Usage: java Peer &lt;protocol version&gt; &lt;peer id&gt; &lt;service access point&gt; &lt;mcc_ip&gt; &lt;mcc_port&gt; &lt;mdb_ip&gt; &lt;mdb_port&gt; &lt;mdr_ip&gt; &lt;mdr_port&gt;
-	 * <br>
-	 * Usage: java Peer &lt;protocol version&gt; &lt;peer id&gt; &lt;service access point&gt; &lt;mcc_ip&gt; &lt;mcc_port&gt; &lt;mdb_ip&gt; &lt;mdb_port&gt; &lt;mdr_ip&gt; &lt;mdr_port&gt; &lt;filename&gt; &lt;repl degree&gt;
-	 *
-	 * @param args 1.  protocol version
-	 * @param args 2.  peer ID
-	 * @param args 3.  service access point
-	 * @param args 4.  multicast control channel IP
-	 * @param args 5.  multicast control channel port
-	 * @param args 6.  multicast data backup IP
-	 * @param args 7.  multicast data backup port
-	 * @param args 8.  multicast data recovery IP
-	 * @param args 9.  multicast data recovery port
-	 * @param args 10. filename to backup
-	 * @param args 11. replication degree
+	 * Default constructor for Peer objects.
 	 */
-	public static void main(String[] args) throws IOException {
-
-		// Parse command line multicast IPs
-		InetAddress mccAddr = InetAddress.getByName(args[3]); // TODO remove magic number, validate input
-		InetAddress mdbAddr = InetAddress.getByName(args[5]); // TODO remove magic number, validate input
-		InetAddress mdrAddr = InetAddress.getByName(args[7]); // TODO remove magic number, validate input
-
-		// Parse command line multicast ports
-		int mccPort = Integer.parseInt(args[4]);
-		int mdbPort = Integer.parseInt(args[6]);
-		int mdrPort = Integer.parseInt(args[8]);
-
-		// Check what type of peer was called
-		if(args.length == 11) {
-			System.out.println("BACK: Initiator peer started."); // TODO add more info
-			initPeer();
-		} else if(args.length == 9) {
-			System.out.println("BACK: Peer started."); // TODO add more info
-			peer();
-		} else {
-			System.out.println("Wrong number of arguments!");
-			System.exit(1);
-		}
-
-		//
-		//		// Cancel Timer thread and close UDP sockets
-		//		multicast.cancel();
-		//
-		//		service.close();
-		//		socket.close();
+	public Peer() {}
+	
+	@Override
+	public void remoteBackup(String filepath, int repDeg) throws RemoteException {
+		// TODO Auto-generated method stub
+		System.out.println(filepath + " | " + repDeg);
+		return;
 	}
 
-	private static void initPeer() throws SocketException {
-
-		// Initialize socket and broadcast message
-		DatagramSocket socket = new DatagramSocket();
-		ServiceMessage msg = new ServiceMessage();
-		msg.putChunk("1.0", "1", "blah", "0", "2");
-		
-		DatagramPacket broadcastPacket = new DatagramPacket(msg.getMessage().getBytes(), msg.getMessage().getBytes().length, mdbAddr, mdbPort);
-
-		// Repeat message every second
-		Timer repeatMsg = new Timer();
-
-		repeatMsg.scheduleAtFixedRate(new TimerTask() {
-			@Override
-			public void run() {
-
-				try {
-
-					System.out.println("INIT: sent \"" + msg.getMessage() +"\"");
-					socket.send(broadcastPacket);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}, 0, 1000);
+	@Override
+	public void remoteRestore(String filepath) throws RemoteException {
+		// TODO Auto-generated method stub
+		return;
 	}
 
-	private static void peer() throws IOException {
-
-		byte[] data = new byte[64000];
-		DatagramPacket dataPacket = new DatagramPacket(data, data.length, mdbAddr, mdbPort);
-
-		MulticastSocket multi = new MulticastSocket(mdbPort);
-		multi.joinGroup(mdbAddr);
-
-		System.out.println("Waiting");
-		multi.receive(dataPacket);
-
-		String msg = new String(dataPacket.getData());
-		msg = msg.trim();
-		System.out.println(msg);
-		
-		multi.close();
+	@Override
+	public void remoteDelete(String filepath) throws RemoteException {
+		// TODO Auto-generated method stub
+		return;
 	}
+
+	@Override
+	public void remoteSetDiskSpace(int maxKB) throws RemoteException {
+		// TODO Auto-generated method stub
+		return;
+	}
+
+	@Override
+	public String remoteGetInfo() throws RemoteException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

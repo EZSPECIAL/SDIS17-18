@@ -2,8 +2,10 @@
 ORDER
 ---------------------
 
-    - !!! 1st change where main() is and actually have Peer objects
-    - backup
+    - Logfile handling
+    - RMI Client parsing
+    - backup single thread / worst ever implementation
+    - Swap to Linux!!!
     - delete
     - restore
     - reclaim
@@ -250,9 +252,13 @@ Client: can ID and perceived repDeg vary between local chunks and overall chunks
 
 TestApp: is this the RMI client?
 
+TestApp: always localhost?
+
+RMI: sometimes Enter key is needed for output to appear in Peer/Server
+
 Backup enhancement (what if not enough peers? / what if no peers with space available?)
 
-Restore - Peers backup files in their respective HDD space, does restoring overwrite the original filepath?
+Restore - Peers backup files in their respective HDD space, does restoring overwrite the original file? Rename if already exists?
 
 "To avoid flooding the host with CHUNK messages, each peer shall wait for a random time uniformly distributed
 between 0 and 400 ms, before sending the CHUNK message. If it receives a CHUNK message before that time expires,
