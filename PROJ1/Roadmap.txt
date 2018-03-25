@@ -252,6 +252,8 @@ TestApp: is this the RMI client?
 
 Backup enhancement (what if not enough peers? / what if no peers with space available?)
 
+Restore - Peers backup files in their respective HDD space, does restoring overwrite the original filepath?
+
 "To avoid flooding the host with CHUNK messages, each peer shall wait for a random time uniformly distributed
 between 0 and 400 ms, before sending the CHUNK message. If it receives a CHUNK message before that time expires,
 it will not send the CHUNK message."
