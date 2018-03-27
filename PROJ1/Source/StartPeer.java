@@ -23,36 +23,7 @@ public class StartPeer {
 	private static int mccPort;
 	private static int mdbPort;
 	private static int mdrPort;
-	
-	private static final String logFolder = "logFiles";
-	private static final String logPrefix = "PeerLog_";
 
-	private static StartPeer singleton = new StartPeer();
-
-	private StartPeer() {}
-	
-	public static StartPeer getInstance( ) {
-		return singleton;
-	}
-	
-	public void printToLog(int PeerID, String message) {
-		
-		String filepath = "./" + logFolder + "/" + logPrefix + PeerID + ".txt";
-		
-		List<String> lines = Arrays.asList(message);
-		Path file = Paths.get(filepath);
-		
-		File createFile = new File(filepath);
-		
-		try {
-			createFile.createNewFile();
-			Files.write(file, lines, Charset.forName("UTF-8"), StandardOpenOption.APPEND);
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-	}
-	
 	/**
 	 * Runs a serverless backup service.
 	 * <br><br>
@@ -74,12 +45,10 @@ public class StartPeer {
 	 */
 	public static void main(String[] args) throws IOException {
 
-	    File directory = new File(logFolder);
-	    if(!directory.exists()) {
-	        directory.mkdir();
-	    }
-		
+		// TODO is this needed?
 		System.setProperty("java.net.preferIPv4Stack", "true");
+		
+		SystemManager.getInstance().init(SystemManager.LogLevel.valueOf(args[11].toUpperCase()), SystemManager.LogMethod.valueOf(args[12].toUpperCase()));
 		
 		// Parse command line multicast IPs
 		mccAddr = InetAddress.getByName(args[3]); // TODO remove magic number, validate input
@@ -97,7 +66,7 @@ public class StartPeer {
 		if(args.length == 11) {
 			System.out.println("BACK: Initiator peer started."); // TODO add more info
 			initPeer();
-		} else if(args.length == 9) {
+		} else if(args.length == 9 || args.length == 13) {
 			System.out.println("BACK: Peer started."); // TODO add more info
 			peer();
 		} else {

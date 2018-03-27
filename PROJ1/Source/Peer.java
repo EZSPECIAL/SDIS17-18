@@ -14,8 +14,7 @@ public class Peer implements RMITesting {
 		// TODO proper log message
 		
 		String msg = "backup: " + filepath + " | " + repDeg;
-		System.out.println(msg);
-		StartPeer.getInstance().printToLog(1, msg);
+		SystemManager.getInstance().logPrint(1, msg, SystemManager.LogLevel.NORMAL);
 		return;
 	}
 

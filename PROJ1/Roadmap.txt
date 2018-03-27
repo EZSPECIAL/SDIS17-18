@@ -8,6 +8,7 @@ ORDER
     - delete
     - restore
     - reclaim
+    - remember to trim() datagram strings
 
 ---------------------
 GRADE
@@ -237,11 +238,15 @@ Client: always localhost?
 
 Client: why append "ENH" when Peers already have protocol version to know whether they're running enhancements or not
 
+Client: RMI and Initiator on same PC? RESTORE / BACKUP need access to the Client disk
+
 RMI: sometimes Enter key is needed for output to appear in Peer/Server
 
 Backup enhancement (what if not enough peers? / what if no peers with space available?)
 
 Restore - Peers backup files in their respective HDD space, does restoring overwrite the original file? Rename if already exists?
+
+Restore - can restore run into Peer space issues?
 
 "To avoid flooding the host with CHUNK messages, each peer shall wait for a random time uniformly distributed
 between 0 and 400 ms, before sending the CHUNK message. If it receives a CHUNK message before that time expires,
@@ -258,7 +263,7 @@ Does deleting chunks trigger the "REMOVED" message or can only the Client trigge
 
 RESTORE Enhancement general idea / interop (isn't TCP enough to solve it?)
 
-Offline Peer - doesn't this mean it loses all info? How can the delete enhancement work?
+Offline Peer - doesn't this mean it loses all info? How can the delete enhancement work? How can "get info" work if the Peer loses info of what it initiated? What about syncing filelist between Peers?
 
 DELETE Enhancement general idea / interop
 (if deletion triggers "REMOVED" message, every Peer could keep where each chunk is located (Peer ID) and know that deletion
