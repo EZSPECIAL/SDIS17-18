@@ -1,0 +1,71 @@
+	private static void initRMI(String accessPoint) {
+		
+        try {
+        	
+            Peer obj = new Peer();
+            RMITesting stub = (RMITesting) UnicastRemoteObject.exportObject(obj, 0);
+
+            // Bind the remote object's stub in the registry
+            Registry registry = LocateRegistry.getRegistry();
+            registry.bind(accessPoint, stub);
+
+            //System.err.println("Server ready");
+        } catch (Exception e) {
+            System.err.println("Server exception: " + e.toString());
+            e.printStackTrace();
+        }
+	}
+
+//	private static void initPeer() throws SocketException {
+//
+//		// Initialize socket and broadcast message
+//		DatagramSocket socket = new DatagramSocket();
+//		ServiceMessage msg = new ServiceMessage();
+//		msg.putChunk("1.0", "1", "blah", "0", "2");
+//		
+//		DatagramPacket broadcastPacket = new DatagramPacket(msg.getMessage().getBytes(), msg.getMessage().getBytes().length, mdbAddr, mdbPort);
+//
+//		// Repeat message every second
+//		Timer repeatMsg = new Timer();
+//
+//		repeatMsg.scheduleAtFixedRate(new TimerTask() {
+//			@Override
+//			public void run() {
+//
+//				try {
+//
+//					System.out.println("INIT: sent \"" + msg.getMessage() +"\"");
+//					socket.send(broadcastPacket);
+//				} catch (IOException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//			}
+//		}, 0, 1000);
+//	}
+//
+//	private static void peer() throws IOException {
+//
+//		byte[] data = new byte[64000];
+//		DatagramPacket dataPacket = new DatagramPacket(data, data.length, mdbAddr, mdbPort);
+//
+//		MulticastSocket multi = new MulticastSocket(mdbPort);
+//		multi.joinGroup(mdbAddr);
+//
+//		System.out.println("Waiting");
+//		multi.receive(dataPacket);
+//
+//		System.out.println("size: " + dataPacket.getLength());
+//		System.out.println("offset: " + dataPacket.getOffset());
+//		
+//		for(byte datas : dataPacket.getData()) {
+//			
+//			System.out.print(datas);
+//		}
+//		
+//		String msg = new String(dataPacket.getData());
+//		msg = msg.trim();
+//		System.out.println(msg);
+//		
+//		multi.close();
+//	}

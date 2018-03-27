@@ -11,9 +11,8 @@ public class Peer implements RMITesting {
 	public void remoteBackup(String filepath, int repDeg) throws RemoteException {
 		
 		// TODO backup protocol
-		// TODO proper log message
 		
-		String msg = "backup: " + filepath + " | " + repDeg;
+		String msg = "backup: " + filepath + " - " + repDeg;
 		SystemManager.getInstance().logPrint(1, msg, SystemManager.LogLevel.NORMAL);
 		return;
 	}

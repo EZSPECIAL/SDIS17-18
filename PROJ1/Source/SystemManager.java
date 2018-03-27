@@ -23,7 +23,7 @@ public class SystemManager {
 	
 	// Log management block
 	private static LogLevel logLevel = LogLevel.NORMAL;
-	private static LogMethod logMethod = LogMethod.BOTH;
+	private static LogMethod logMethod = LogMethod.CONSOLE;
 	private static final String logFolder = "logFiles";
 	private static final String logPrefix = "PeerLog_";
 	

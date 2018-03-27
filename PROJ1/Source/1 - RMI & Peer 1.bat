@@ -1,3 +1,3 @@
 start rmiregistry
-java StartPeer 1.0 1 Peer1 224.0.0.1 1500 224.0.0.2 1600 224.0.0.3 1700 file 1 NORMAL BOTH
+java StartPeer 1.0 1 Peer1 225.0.0.1:1024 225.0.0.2:1025 225.0.0.3:1026 NORMAL BOTH
 PAUSE

@@ -1,156 +1,209 @@
-import java.io.File;
 import java.io.IOException;
 import java.util.TimerTask;
 import java.net.*;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Timer;
 
 public class StartPeer {
 
-	private static InetAddress mccAddr;
-	private static InetAddress mdbAddr;
-	private static InetAddress mdrAddr;
-
-	private static int mccPort;
-	private static int mdbPort;
-	private static int mdrPort;
-
+	// Indices for command line parameters
+	private static final int versionI = 0;
+	private static final int peerI = 1;
+	private static final int accessPointI = 2;
+	private static final int mccI = 3;
+	private static final int mdbI = 4;
+	private static final int mdrI = 5;
+	private static final int logLevelI = 6;
+	private static final int logMethodI = 7;
+	
 	/**
-	 * Runs a serverless backup service.
-	 * <br><br>
-	 * Usage: java Peer &lt;protocol version&gt; &lt;peer id&gt; &lt;service access point&gt; &lt;mcc_ip&gt; &lt;mcc_port&gt; &lt;mdb_ip&gt; &lt;mdb_port&gt; &lt;mdr_ip&gt; &lt;mdr_port&gt;
-	 * <br>
-	 * Usage: java Peer &lt;protocol version&gt; &lt;peer id&gt; &lt;service access point&gt; &lt;mcc_ip&gt; &lt;mcc_port&gt; &lt;mdb_ip&gt; &lt;mdb_port&gt; &lt;mdr_ip&gt; &lt;mdr_port&gt; &lt;filename&gt; &lt;repl degree&gt;
-	 *
+	 * Starts a Peer for a distributed backup system with the specified arguments.
+	 * 
 	 * @param args 1.  protocol version
 	 * @param args 2.  peer ID
 	 * @param args 3.  service access point (RMI Object name)
-	 * @param args 4.  multicast control channel IP
-	 * @param args 5.  multicast control channel port
-	 * @param args 6.  multicast data backup IP
-	 * @param args 7.  multicast data backup port
-	 * @param args 8.  multicast data recovery IP
-	 * @param args 9.  multicast data recovery port
-	 * @param args 10. filename to backup
-	 * @param args 11. replication degree
+	 * @param args 4.  multicast control channel IP:port
+	 * @param args 5.  multicast data backup IP:port
+	 * @param args 6.  multicast data recovery IP:port
+	 * @param args 7.  logging level
+	 * @param args 8.  logging method
 	 */
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) {
 
-		// TODO is this needed?
-		System.setProperty("java.net.preferIPv4Stack", "true");
+		//System.setProperty("java.net.preferIPv4Stack", "true"); TODO needed?
 		
-		SystemManager.getInstance().init(SystemManager.LogLevel.valueOf(args[11].toUpperCase()), SystemManager.LogMethod.valueOf(args[12].toUpperCase()));
-		
-		// Parse command line multicast IPs
-		mccAddr = InetAddress.getByName(args[3]); // TODO remove magic number, validate input
-		mdbAddr = InetAddress.getByName(args[5]); // TODO remove magic number, validate input
-		mdrAddr = InetAddress.getByName(args[7]); // TODO remove magic number, validate input
+		parseArguments(args);
 
-		// Parse command line multicast ports
-		mccPort = Integer.parseInt(args[4]);
-		mdbPort = Integer.parseInt(args[6]);
-		mdrPort = Integer.parseInt(args[8]);
-		
-		initRMI(args[2]);
-		
-		// Check what type of peer was called
-		if(args.length == 11) {
-			System.out.println("BACK: Initiator peer started."); // TODO add more info
-			initPeer();
-		} else if(args.length == 9 || args.length == 13) {
-			System.out.println("BACK: Peer started."); // TODO add more info
-			peer();
-		} else {
-			System.out.println("Wrong number of arguments!");
-			System.exit(1);
-		}
-
-		//
-		//		// Cancel Timer thread and close UDP sockets
-		//		multicast.cancel();
-		//
-		//		service.close();
-		//		socket.close();
+//		initRMI(args[2]);
+//
+//		// Cancel Timer thread and close UDP sockets
+//		multicast.cancel();
+//
+//		service.close();
+//		socket.close();
 	}
 	
-	private static void initRMI(String accessPoint) {
+	/**
+	 * Parses and validates command line arguments, sets up logging management and creates the Peer object.
+	 * 
+	 * @param args command line arguments received
+	 */
+	private static void parseArguments(String[] args) {
 		
-        try {
-        	
-            Peer obj = new Peer();
-            RMITesting stub = (RMITesting) UnicastRemoteObject.exportObject(obj, 0);
-
-            // Bind the remote object's stub in the registry
-            Registry registry = LocateRegistry.getRegistry();
-            registry.bind(accessPoint, stub);
-
-            //System.err.println("Server ready");
-        } catch (Exception e) {
-            System.err.println("Server exception: " + e.toString());
-            e.printStackTrace();
-        }
-	}
-
-	private static void initPeer() throws SocketException {
-
-		// Initialize socket and broadcast message
-		DatagramSocket socket = new DatagramSocket();
-		ServiceMessage msg = new ServiceMessage();
-		msg.putChunk("1.0", "1", "blah", "0", "2");
+		if(args.length != 6 && args.length != 8) cmdErr("wrong number of arguments!");
 		
-		DatagramPacket broadcastPacket = new DatagramPacket(msg.getMessage().getBytes(), msg.getMessage().getBytes().length, mdbAddr, mdbPort);
-
-		// Repeat message every second
-		Timer repeatMsg = new Timer();
-
-		repeatMsg.scheduleAtFixedRate(new TimerTask() {
-			@Override
-			public void run() {
-
-				try {
-
-					System.out.println("INIT: sent \"" + msg.getMessage() +"\"");
-					socket.send(broadcastPacket);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}, 0, 1000);
-	}
-
-	private static void peer() throws IOException {
-
-		byte[] data = new byte[64000];
-		DatagramPacket dataPacket = new DatagramPacket(data, data.length, mdbAddr, mdbPort);
-
-		MulticastSocket multi = new MulticastSocket(mdbPort);
-		multi.joinGroup(mdbAddr);
-
-		System.out.println("Waiting");
-		multi.receive(dataPacket);
-
-		System.out.println("size: " + dataPacket.getLength());
-		System.out.println("offset: " + dataPacket.getOffset());
+		// Parse protocol version
+		float protocolVersion;
 		
-		for(byte datas : dataPacket.getData()) {
+		if(args[versionI].equals("1.0")) {
+			protocolVersion = 1.0f;
+		} else if(args[versionI].equals("1.1")) {
+			protocolVersion = 1.1f;
+		} else printErrExit("protocol version must be 1.0 or 1.1!");
+		
+		// Parse peer ID	
+		int peerID = validateInt(args[peerI], "peer ID must be a non zero positive number!");
+		if(peerID <= 0) printErrExit("peer ID must be a non zero positive number!");
+		
+		// Parse multicast channels' hostnames and ports
+		InetAddress mccAddr = parseChannelHost(args[mccI], "mcc");
+		int mccPort = parseChannelPort(args[mccI], "mcc");
+		
+		InetAddress mdbAddr = parseChannelHost(args[mdbI], "mdb");
+		int mdbPort = parseChannelPort(args[mdbI], "mdb");
+		
+		InetAddress mdrAddr = parseChannelHost(args[mdrI], "mdr");
+		int mdrPort = parseChannelPort(args[mdrI], "mdr");
+		
+		if(mccPort == mdbPort || mccPort == mdrPort || mdbPort == mdrPort) printErrExit("multicast channel ports must be different!");
+		
+		// Parse optional parameters for logging options
+		if(args.length == 8) {
 			
-			System.out.print(datas);
+			SystemManager.LogLevel logLevel = null;
+			try {
+				logLevel = SystemManager.LogLevel.valueOf(args[logLevelI].toUpperCase());
+			} catch(IllegalArgumentException e) {
+				printErrExit("invalid logging level \"" + args[logLevelI].toUpperCase() + "\", must be one of [NONE, NORMAL, DEBUG, VERBOSE]!");
+			}
+			
+			SystemManager.LogMethod logMethod = null;
+			try {
+				logMethod = SystemManager.LogMethod.valueOf(args[logMethodI].toUpperCase());
+			} catch(IllegalArgumentException e) {
+				printErrExit("invalid logging method \"" + args[logMethodI].toUpperCase() + "\", must be one of [CONSOLE, FILE, BOTH]!");
+			}
+			
+			SystemManager.getInstance().init(logLevel, logMethod);
+		}
+	}
+	
+	/**
+	 * Parses a hostname in IP:port format, exits program if hostname is invalid.
+	 * 
+	 * @param s the hostname string
+	 * @param channelName the channel name
+	 * @return InetAddress of the host
+	 */
+	private static InetAddress parseChannelHost(String s, String channelName) {
+		
+		String[] split = s.split(":");
+		if(split.length != 2) printErrExit(channelName + " must be in \"IP:port\" format!");
+		
+		return validateHost(split[0]);
+	}
+	
+	/**
+	 * Parses a port in IP:port format, exits program if port is invalid.
+	 * 
+	 * @param s port
+	 * @param channelName the channel name
+	 * @return port as integer
+	 */
+	private static int parseChannelPort(String s, String channelName) {
+		
+		String[] split = s.split(":");
+		if(split.length != 2) printErrExit(channelName + " must be in \"IP:port\" format!");
+		
+		int port = validateInt(split[1], channelName + " port must be a number between 1024 and 49151!");
+		
+		if(port < 1024 || port > 49151) printErrExit(channelName + " port must be a number between 1024 and 49151!");
+		
+		return port;
+	}
+	
+	/**
+	 * Attempts to convert string to int and exits program if conversion is not possible.
+	 * 
+	 * @param s string to convert
+	 * @param errMsg error message to print
+	 * @return converted integer
+	 */
+	private static int validateInt(String s, String errMsg) {
+		
+		int num = 0;
+		try {
+			num = Integer.parseInt(s);
+		} catch(NumberFormatException e) {
+			printErrExit(errMsg);
 		}
 		
-		String msg = new String(dataPacket.getData());
-		msg = msg.trim();
-		System.out.println(msg);
-		
-		multi.close();
+		return num;
 	}
+	
+	/**
+	 * Validates hostname as multicast address and exits program if invalid.
+	 * 
+	 * @param s the multicast adress string
+	 * @return InetAddress of the host
+	 */
+	private static InetAddress validateHost(String s) {
+		
+		InetAddress addr = null;
+		try {
+			addr = InetAddress.getByName(s);
+		} catch (UnknownHostException e) {
+			printErrExit("unknown host \"" + s + "\"!");
+		}
+		
+		// Validate multicast address
+		if(!addr.isMulticastAddress() || addr.isMCLinkLocal()) printErrExit(addr.getHostAddress() + " is not a valid multicast address! Must be from 224.0.1.0 to 239.255.255.255.");
+
+		return addr;
+	}
+	
+	/**
+	 * Prints error message and program usage. Exits program with error code -1.
+	 * 
+	 * @param message error message to print
+	 * @param protocol protocol being executed
+	 */
+	private static void cmdErr(String message) {
+		
+		System.err.println("StartPeer: " + message);
+		
+		System.out.println("Regular usage:");
+		System.out.println("\t java StartPeer 1.0 1 Peer1 224.0.0.1:1500 224.0.0.2:1600 224.0.0.3:1700");
+		System.out.println("\t java StartPeer 1.1 1 Peer1 224.0.0.1:1500 224.0.0.2:1600 224.0.0.3:1700");
+		System.out.println("Logging options:");
+		System.out.println("\t java StartPeer 1.0 1 Peer1 224.0.0.1:1500 224.0.0.2:1600 224.0.0.3:1700 <logLevel> <logMethod>");
+		System.out.println("\t <logLevel> - NONE, NORMAL, DEBUG, VERBOSE");
+		System.out.println("\t <logMethod> - CONSOLE, FILE, BOTH");
+		
+		System.exit(-1);
+	}
+	
+	/**
+	 * Prints error message and exits with error code -1.
+	 * 
+	 * @param message error message to print
+	 */
+	private static void printErrExit(String message) {
+		
+		System.err.println("StartPeer: " + message);
+		System.exit(-1);
+	}
+	
 }

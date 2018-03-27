@@ -1,5 +1,0 @@
-java TestApp <accessPoint> <protocol> <opnd1> <opnd2>
-
-protocol - backup / restore / delete / reclaim / state
-opnd1 - pathname, max KB if reclaim, state has no operands
-opnd2 - repDeg if backup

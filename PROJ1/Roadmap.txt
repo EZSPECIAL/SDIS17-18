@@ -2,13 +2,15 @@
 ORDER
 ---------------------
 
-    - Logfile handling / cmd parsing / peer creation
+    - peer / RMI handling
+    - multicast channel handling
     - backup single thread / worst ever implementation
     - Swap to Linux!!!
     - delete
     - restore
     - reclaim
     - remember to trim() datagram strings
+    - protocol version dependent behavior (1.0 base 1.1 enh)
 
 ---------------------
 GRADE
@@ -19,19 +21,6 @@ GRADE
     - 5% - RMI
     - 5% - concurrency model in report
     - 5% - demo setup
-
----------------------
-RUNNING (Peer)
----------------------
-
-    - protocol version (!!! decides whether to use base messages or enhanced versions)
-    - server id
-    - service access point
-        - IP:port, can be just port if localhost (only for TCP / UDP)
-        - name of remote object that provides the "testing" service (if RMI)
-    - mc
-    - mdb
-    - mdr
 
 ---------------------
 THREADING
