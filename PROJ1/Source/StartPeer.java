@@ -1,10 +1,4 @@
-import java.io.IOException;
-import java.util.TimerTask;
 import java.net.*;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
-import java.util.Timer;
 
 public class StartPeer {
 
@@ -17,6 +11,9 @@ public class StartPeer {
 	private static final int mdrI = 5;
 	private static final int logLevelI = 6;
 	private static final int logMethodI = 7;
+	
+	// TODO move?
+	private static Peer peer;
 	
 	/**
 	 * Starts a Peer for a distributed backup system with the specified arguments.
@@ -35,14 +32,10 @@ public class StartPeer {
 		//System.setProperty("java.net.preferIPv4Stack", "true"); TODO needed?
 		
 		parseArguments(args);
+		peer.initRMI();
 
-//		initRMI(args[2]);
-//
 //		// Cancel Timer thread and close UDP sockets
 //		multicast.cancel();
-//
-//		service.close();
-//		socket.close();
 	}
 	
 	/**
@@ -55,13 +48,7 @@ public class StartPeer {
 		if(args.length != 6 && args.length != 8) cmdErr("wrong number of arguments!");
 		
 		// Parse protocol version
-		float protocolVersion;
-		
-		if(args[versionI].equals("1.0")) {
-			protocolVersion = 1.0f;
-		} else if(args[versionI].equals("1.1")) {
-			protocolVersion = 1.1f;
-		} else printErrExit("protocol version must be 1.0 or 1.1!");
+		if(!args[versionI].equals("1.0") && !args[versionI].equals("1.1")) printErrExit("protocol version must be 1.0 or 1.1!");
 		
 		// Parse peer ID	
 		int peerID = validateInt(args[peerI], "peer ID must be a non zero positive number!");
@@ -98,6 +85,8 @@ public class StartPeer {
 			
 			SystemManager.getInstance().init(logLevel, logMethod);
 		}
+		
+		peer = new Peer(args[versionI], peerID, args[accessPointI], mccAddr, mccPort, mdbAddr, mdbPort, mdrAddr, mdrPort);
 	}
 	
 	/**

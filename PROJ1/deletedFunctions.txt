@@ -1,21 +1,3 @@
-	private static void initRMI(String accessPoint) {
-		
-        try {
-        	
-            Peer obj = new Peer();
-            RMITesting stub = (RMITesting) UnicastRemoteObject.exportObject(obj, 0);
-
-            // Bind the remote object's stub in the registry
-            Registry registry = LocateRegistry.getRegistry();
-            registry.bind(accessPoint, stub);
-
-            //System.err.println("Server ready");
-        } catch (Exception e) {
-            System.err.println("Server exception: " + e.toString());
-            e.printStackTrace();
-        }
-	}
-
 //	private static void initPeer() throws SocketException {
 //
 //		// Initialize socket and broadcast message

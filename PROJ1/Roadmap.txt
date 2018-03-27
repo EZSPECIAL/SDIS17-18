@@ -2,8 +2,9 @@
 ORDER
 ---------------------
 
-    - peer / RMI handling
-    - multicast channel handling
+    - Peer structure
+    - Channel objects in Peer
+    - test receive/send
     - backup single thread / worst ever implementation
     - Swap to Linux!!!
     - delete
