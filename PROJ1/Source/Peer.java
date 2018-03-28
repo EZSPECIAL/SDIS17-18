@@ -1,6 +1,9 @@
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.net.MulticastSocket;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -13,19 +16,12 @@ public class Peer implements RMITesting {
 	private int peerID;
 	private String accessPoint;
 	
-	// Addresses and ports for multicast channels
-	private InetAddress mccAddr;
-	private InetAddress mdbAddr;
-	private InetAddress mdrAddr;
-	
-	private int mccPort;
-	private int mdbPort;
-	private int mdrPort;
-	
 	// Sockets for multicast channels
-	private MulticastSocket mccSocket;
-	private MulticastSocket mdbSocket;
-	private MulticastSocket mdrSocket;
+	private ServiceChannel mcc;
+	private ServiceChannel mdb;
+	private ServiceChannel mdr;
+	
+	private int chunkNo = 0; // TODO move to protocol state class
 	
 	// TODO document
 	public Peer(String protocolVersion, int peerID, String accessPoint, InetAddress mccAddr, int mccPort, InetAddress mdbAddr, int mdbPort, InetAddress mdrAddr, int mdrPort) {
@@ -33,21 +29,10 @@ public class Peer implements RMITesting {
 		this.protocolVersion = protocolVersion;
 		this.peerID = peerID;
 		this.accessPoint = accessPoint;
-		this.mccAddr = mccAddr;
-		this.mdbAddr = mdbAddr;
-		this.mdrAddr = mdrAddr;
-		this.mccPort = mccPort;
-		this.mdbPort = mdbPort;
-		this.mdrPort = mdrPort;
 		
-		try {
-			this.mccSocket = new MulticastSocket(mccPort);
-			this.mdbSocket = new MulticastSocket(mdbPort);
-			this.mdrSocket = new MulticastSocket(mdrPort);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		this.mcc = new ServiceChannel(mccAddr, mccPort, "mcc");
+		this.mdb = new ServiceChannel(mdbAddr, mdbPort, "mdb");
+		this.mdr = new ServiceChannel(mdrAddr, mdrPort, "mdr");
 	}
 	
 	/**
@@ -63,13 +48,54 @@ public class Peer implements RMITesting {
             registry.rebind(this.accessPoint, stub);
 
             String msg = "RMI started with remote name \"" + this.accessPoint + "\"";
-            SystemManager.getInstance().logPrint(this.peerID, msg, SystemManager.LogLevel.DEBUG);
+            SystemManager.getInstance().logPrint(msg, SystemManager.LogLevel.DEBUG);
         } catch(Exception e) {
         	
             String msg = "RMI exception: " + e.toString();
-            SystemManager.getInstance().logPrint(this.peerID, msg, SystemManager.LogLevel.DEBUG);
+            SystemManager.getInstance().logPrint(msg, SystemManager.LogLevel.DEBUG);
             e.printStackTrace();
         }
+	}
+	
+	// TODO document
+	public void receiveLoop() {
+		
+		while(true) {
+			
+			DatagramPacket packet = this.mdb.listen();
+			ServiceMessage parser = new ServiceMessage();
+			
+			// Parse header/body
+			if(!parser.findHeaderIndices(packet)) continue;
+			String[] headerFields = parser.stripHeader(packet);
+			byte[] bodyData = parser.stripBody(packet);
+			
+			// Create Peer storage area
+		    File directory = new File("./Storage");
+		    if(!directory.exists()) {
+		        directory.mkdir();
+		    }
+		    
+		    // Output data to file
+			FileOutputStream output;
+			try {
+				output = new FileOutputStream("./Storage/" + headerFields[3] + "." + headerFields[4]);
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				continue;
+			}
+
+			SystemManager.getInstance().logPrint("writing file", SystemManager.LogLevel.DEBUG);
+			
+			try {
+				output.write(bodyData);
+				output.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	@Override
@@ -77,11 +103,16 @@ public class Peer implements RMITesting {
 		
 		// TODO backup protocol
 		
-		String msg = "backup: " + filepath + " - " + repDeg;
-		SystemManager.getInstance().logPrint(this.peerID, msg, SystemManager.LogLevel.NORMAL);
+		String backStarted = "backup: " + filepath + " - " + repDeg;
+		SystemManager.getInstance().logPrint(backStarted, SystemManager.LogLevel.NORMAL);
+		
+		ServiceMessage sMsg = new ServiceMessage();
+		byte[] msg = sMsg.putChunk(this.protocolVersion, this.peerID, filepath, this.chunkNo, repDeg);
+		this.mdb.send(msg);
+		
 		return;
 	}
-
+	
 	@Override
 	public void remoteRestore(String filepath) throws RemoteException {
 		

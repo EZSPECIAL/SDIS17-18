@@ -2,15 +2,13 @@
 ORDER
 ---------------------
 
-    - Peer structure
-    - Channel objects in Peer
-    - test receive/send
-    - backup single thread / worst ever implementation
+    - backup - SHA256 / chunkNo
+    - use different TODO values
+    - add debug flag
     - Swap to Linux!!!
     - delete
     - restore
     - reclaim
-    - remember to trim() datagram strings
     - protocol version dependent behavior (1.0 base 1.1 enh)
 
 ---------------------

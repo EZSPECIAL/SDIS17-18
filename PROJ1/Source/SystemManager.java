@@ -20,6 +20,7 @@ public class SystemManager {
 	public enum LogMethod {CONSOLE, FILE, BOTH}
 	
 	private static SystemManager singleton = new SystemManager();
+	private static int peerID;
 	
 	// Log management block
 	private static LogLevel logLevel = LogLevel.NORMAL;
@@ -45,7 +46,7 @@ public class SystemManager {
 	 * @param logLevel the desired logging level (normal / debug / verbose)
 	 * @param logMethod the desired logging method (file / console / both)
 	 */
-	public void init(LogLevel logLevel, LogMethod logMethod) {
+	public void initLog(LogLevel logLevel, LogMethod logMethod) {
 		
 		// Create log file directory if it doesn't exist
 	    File directory = new File(logFolder);
@@ -57,6 +58,13 @@ public class SystemManager {
 	    SystemManager.logMethod = logMethod;
 	}
 	
+	/**
+	 * @param peerID numeric value of Peer ID to set
+	 */
+	public void setPeerID(int peerID) {
+		SystemManager.peerID = peerID;
+	}
+	
 	// TODO is this going to cause problems with threading?
 	/**
 	 * Handles logging of messages, prints only if the log level matches the current log level and
@@ -66,7 +74,7 @@ public class SystemManager {
 	 * @param message string to log
 	 * @param desiredLogLevel log level of this message
 	 */
-	public void logPrint(int peerID, String message, LogLevel desiredLogLevel) {
+	public void logPrint(String message, LogLevel desiredLogLevel) {
 		
 		if(logLevel.equals(LogLevel.NONE)) return;
 		
@@ -84,7 +92,7 @@ public class SystemManager {
 		if(logLevel.ordinal() < desiredLogLevel.ordinal()) return;
 		
 		// Create path for log file
-		String filepath = "./" + logFolder + "/" + logPrefix + peerID + ".txt";
+		String filepath = "./" + logFolder + "/" + logPrefix + SystemManager.peerID + ".txt";
 		File toCreate = new File(filepath);
 		Path toWrite = Paths.get(filepath);
 

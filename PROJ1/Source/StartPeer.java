@@ -32,7 +32,9 @@ public class StartPeer {
 		//System.setProperty("java.net.preferIPv4Stack", "true"); TODO needed?
 		
 		parseArguments(args);
+		
 		peer.initRMI();
+		peer.receiveLoop();
 
 //		// Cancel Timer thread and close UDP sockets
 //		multicast.cancel();
@@ -83,9 +85,10 @@ public class StartPeer {
 				printErrExit("invalid logging method \"" + args[logMethodI].toUpperCase() + "\", must be one of [CONSOLE, FILE, BOTH]!");
 			}
 			
-			SystemManager.getInstance().init(logLevel, logMethod);
+			SystemManager.getInstance().initLog(logLevel, logMethod);
 		}
 		
+		SystemManager.getInstance().setPeerID(peerID);
 		peer = new Peer(args[versionI], peerID, args[accessPointI], mccAddr, mccPort, mdbAddr, mdbPort, mdrAddr, mdrPort);
 	}
 	
