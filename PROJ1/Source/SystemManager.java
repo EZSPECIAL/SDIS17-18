@@ -13,9 +13,7 @@ import java.util.List;
 
 public class SystemManager {
 
-	/**
-	 * Enumerator classes for logging management.
-	 */
+	// Enumerator classes for logging management.
 	public enum LogLevel {NONE, NORMAL, DEBUG, VERBOSE}
 	public enum LogMethod {CONSOLE, FILE, BOTH}
 	
@@ -65,7 +63,7 @@ public class SystemManager {
 		SystemManager.peerID = peerID;
 	}
 	
-	// TODO is this going to cause problems with threading?
+	// ASK is this going to cause problems with threading?
 	/**
 	 * Handles logging of messages, prints only if the log level matches the current log level and
 	 * can print to console and/or a log file according to the current settings.
@@ -107,7 +105,7 @@ public class SystemManager {
 			toCreate.createNewFile();
 			Files.write(toWrite, lines, Charset.forName("UTF-8"), StandardOpenOption.APPEND);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			// CATCH Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

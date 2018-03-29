@@ -1,8 +1,10 @@
 import java.io.File;
+import java.io.IOException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.security.NoSuchAlgorithmException;
 
 public class TestApp {
 
@@ -109,7 +111,10 @@ public class TestApp {
 		
 		try {
 			remoteObj.remoteBackup(filepath, repDeg);
-		} catch(RemoteException e) {
+		} catch(IOException e) {
+			System.err.println("TestApp: exception executing remote backup " + e.toString());
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
 			System.err.println("TestApp: exception executing remote backup " + e.toString());
 			e.printStackTrace();
 		}
@@ -165,14 +170,12 @@ public class TestApp {
 	 */
 	private static void runState() {
 		
-		try {
-			String result = remoteObj.remoteGetInfo();
-		} catch(RemoteException e) {
-			System.err.println("TestApp: exception executing remote reclaim " + e.toString());
-			e.printStackTrace();
-		}
-		
-		// TODO handle result
+//		try {
+//			String result = remoteObj.remoteGetInfo(); // TODO handle result
+//		} catch(RemoteException e) {
+//			System.err.println("TestApp: exception executing remote reclaim " + e.toString());
+//			e.printStackTrace();
+//		}
 	}
 	
 	/**
@@ -183,7 +186,7 @@ public class TestApp {
 	 */
 	private static RMITesting getRMStub(String accessPoint) {
 
-		//String host = (args.length < 1) ? null : args[0]; // TODO always local host?
+		//String host = (args.length < 1) ? null : args[0]; // TODO RMI over network
 		try {
 			Registry registry = LocateRegistry.getRegistry();
 			RMITesting stub = (RMITesting) registry.lookup(accessPoint);

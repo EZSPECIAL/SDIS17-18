@@ -2,10 +2,9 @@
 ORDER
 ---------------------
 
-    - backup - SHA256 / chunkNo
-    - use different TODO values
-    - add debug flag
-    - Swap to Linux!!!
+    - backup - send multiples chunks
+    - add debug flag?
+    - swap to linux
     - delete
     - restore
     - reclaim
@@ -42,7 +41,7 @@ Version 2
 
 Version 3
 
-    - multiple multicaster instances on any Peer, handle 1 protocol
+    - multiple multicaster instances on any Peer, handle 1 protocol (send N messages with sliding window)
     - one thread per channel, keeping protocol instances state in objects
     - initiator creates object on transmit, receiver on receive
     - java.util.concurrent.ConcurrentHashMap to store protocol state
@@ -66,15 +65,8 @@ GENERAL
 
 Peers
 
-    - identified by ID
     - have a local folder that serves as their virtual HDD
-
-Channels
-
-    - multicast control channel - control messages
-    - multicast data backup - backup protocol
-    - multicast data restore - restore protocol
-    - ip:port pair for each
+    - have a max disk space and keep count of chunk disk space usage (start with 8MB)
 
 Generic message
 
@@ -114,10 +106,15 @@ Restore
 
     Initiator
     - MC -> GETCHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+    - save file with _restore appended "file_restored.png" or "file_restored" if no extension
+    - save in same filepath as original file or a "restored" folder
     
     Peers (that have the file-chunk)
     - MDR -> CHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF><Body>
     - random delay between 0 and 400ms
+    - "To avoid flooding the host with CHUNK messages, each peer shall wait for a random time uniformly distributed
+between 0 and 400 ms, before sending the CHUNK message. If it receives a CHUNK message before that time expires,
+it will not send the CHUNK message."
 
 Delete
 
@@ -152,8 +149,6 @@ SETUP
 CLIENT
 ---------------------
 
-    - Each Peer provides an interface for testing
-
     Get info ->
         For each file Peer has initiated backup of
             - file pathname
@@ -176,6 +171,7 @@ Backup
 
     - ensure repDegre
     - keep interoperability
+    - what if not enough peers or disk space on them?
 
 Restore (using TCP)
 
@@ -207,47 +203,34 @@ EXTRAS
 ---------------------
 
     - every protocol playing nice with each other
+    - monitor file system changes, eg deletion (unconfirmed)
+    - RMI over network, "//host/name" format (confirmed)
+    - RESTORE: concurrent same chunk requests from different Peers
+    - RESTORE: worry about not getting the chunks
 
 ---------------------
 QUESTIONS
 ---------------------
 
-Concurrent protocols - restore a file that's being backed up, delete file being backed up, etc
+|- Chunk size 0 counting for total
 
-Client: chunks occupy more space than allowed, does the Peer delete random chunks and send "REMOVED" msgs?
+|- Client: chunks occupy more space than allowed, does the Peer delete random chunks and send "REMOVED" msgs?
+|- Does deleting chunks trigger the "REMOVED" message or can only the Client trigger it by changing max space?
 
-Client: what's the "backup service id of the file"? SHA256 generated?
-
-Client: what's the chunk id? SHA256 + chunkNo?
-
-Client: can ID and perceived repDeg vary between local chunks and overall chunks?
-
-Client: always localhost?
-
-Client: why append "ENH" when Peers already have protocol version to know whether they're running enhancements or not
-
-Client: RMI and Initiator on same PC? RESTORE / BACKUP need access to the Client disk
+|- Client: what's the "backup service id of the file"? SHA256 generated?
+|- Client: what's the chunk id? SHA256 + chunkNo?
+|- Client: can ID and perceived repDeg vary between local chunks and overall chunks?
+|- Client: why append "ENH" when Peers already have protocol version to know whether they're running enhancements or not
 
 RMI: sometimes Enter key is needed for output to appear in Peer/Server
 
-Backup enhancement (what if not enough peers? / what if no peers with space available?)
-
-Restore - Peers backup files in their respective HDD space, does restoring overwrite the original file? Rename if already exists?
-
-Restore - can restore run into Peer space issues?
-
-"To avoid flooding the host with CHUNK messages, each peer shall wait for a random time uniformly distributed
-between 0 and 400 ms, before sending the CHUNK message. If it receives a CHUNK message before that time expires,
-it will not send the CHUNK message."
-(what does this mean exactly?)
+Filesystem delete - affects service?
 
 "A peer should also count the number of confirmation messages for each of the chunks it has stored and keep that
 count in non-volatile memory. This information can be useful if the peer runs out of disk space: in that event,
 the peer may try to free some space by evicting chunks whose actual replication degree is higher than the desired
 replication degree."
 (backup enhancement invalidates this?)
-
-Does deleting chunks trigger the "REMOVED" message or can only the Client trigger it by changing max space?
 
 RESTORE Enhancement general idea / interop (isn't TCP enough to solve it?)
 

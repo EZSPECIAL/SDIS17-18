@@ -1,13 +1,11 @@
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.DatagramPacket;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class ServiceMessage {
 
+	// Useful constants
 	private static final String lineTermination = "\r\n";
 	private static final String headerTermination = "\r\n\r\n";
 	private static final int headerTerminationSize = 4;
@@ -18,45 +16,50 @@ public class ServiceMessage {
 	private int headerEndI = 0;
 
 	// PUTCHUNK <Version> <SenderId> <FileId> <ChunkNo> <ReplicationDeg> <CRLF><CRLF><Body>
-	// TODO document
-	public byte[] putChunk(String version, int senderID, String fileID, int chunkNo, int replicationDeg) {
-		
-		String msg = "PUTCHUNK " + version + " " + senderID + " " + fileID + " " + chunkNo + " " + replicationDeg + headerTermination;
-		
-		byte[] header = msg.getBytes();
-		
-	    Path path = Paths.get(fileID);
+	// DOC document
+	public byte[] putChunk(int peerID, ProtocolState state) throws IOException {
+
+		// Get binary file data
 	    byte[] buf = new byte[dataSize];
-	    
-	    int nRead = 0;
-	    try {
-		    InputStream input = Files.newInputStream(path); // TODO change to FileInputStream, add file exists check
-			nRead = input.read(buf, 0, dataSize); // TODO divide file
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	    
-	    byte[] finalMsg = new byte[nRead];
-		ByteArrayOutputStream output = new ByteArrayOutputStream();
-		output.write(header, 0, header.length);
-	    output.write(buf, 0, nRead);
-	    finalMsg = output.toByteArray();
-	    
-		try {
-			output.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		int nRead = this.getData(state.getFilepath(), buf);
 		
-		//System.out.println("nread: " + nRead);
-		
-	    // TODO SHA256 of fileID
-	    return finalMsg;
+        String readMsg = "putchunk nRead: " + nRead;
+        SystemManager.getInstance().logPrint(readMsg, SystemManager.LogLevel.VERBOSE);
+	    
+	    // Merge header and body to single byte[]
+		String header = "PUTCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + " " + state.getDesiredRepDeg() + headerTermination;
+		return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
+
+	    // TODO check nRead for file end
+		// TODO file already backed up by this Peer
+		// TODO chunk no handling with ProtocolState
+		// TODO chunkNo up to 6 digits (max 64GB)
+		// TODO chunks multiple of 64KB
 	}
 	
-	// TODO document
+	// DOC document
+	private byte[] mergeByte(byte[] arr1, int arr1Len, byte[] arr2, int arr2Len) throws IOException {
+		
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		output.write(arr1, 0, arr1Len);
+	    output.write(arr2, 0, arr2Len);
+	    byte[] merged = output.toByteArray();
+	    output.close();
+	    
+	    return merged;
+	}
+	
+	// DOC document
+	private int getData(String filepath, byte[] data) throws IOException {
+
+		FileInputStream input = new FileInputStream(filepath);
+		int nRead = input.read(data, 0, dataSize);
+		input.close();
+		
+		return nRead;
+	}
+
+	// DOC document
 	public boolean findHeaderIndices(DatagramPacket packet) {
 
 		byte[] data = packet.getData();
@@ -78,7 +81,7 @@ public class ServiceMessage {
 		return true;
 	}
 	
-	// TODO document
+	// DOC document
 	public String[] stripHeader(DatagramPacket packet) {
 
 		byte[] data = packet.getData();
@@ -96,7 +99,7 @@ public class ServiceMessage {
 		return headerFields;
 	}
 	
-	// TODO document
+	// DOC document
 	public byte[] stripBody(DatagramPacket packet) {
 
 		// Calculate body size and offset
@@ -115,7 +118,7 @@ public class ServiceMessage {
 		try {
 			output.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			// CATCH Auto-generated catch block
 			e.printStackTrace();
 		}
 		

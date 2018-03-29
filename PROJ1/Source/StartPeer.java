@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.net.*;
 
 public class StartPeer {
@@ -12,7 +13,7 @@ public class StartPeer {
 	private static final int logLevelI = 6;
 	private static final int logMethodI = 7;
 	
-	// TODO move?
+	// ASK move?
 	private static Peer peer;
 	
 	/**
@@ -29,15 +30,18 @@ public class StartPeer {
 	 */
 	public static void main(String[] args) {
 
-		//System.setProperty("java.net.preferIPv4Stack", "true"); TODO needed?
+		//System.setProperty("java.net.preferIPv4Stack", "true"); ASK needed?
 		
 		parseArguments(args);
 		
 		peer.initRMI();
-		peer.receiveLoop();
-
-//		// Cancel Timer thread and close UDP sockets
-//		multicast.cancel();
+		
+		try {
+			peer.receiveLoop();
+		} catch (IOException e) {
+			// CATCH Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	/**

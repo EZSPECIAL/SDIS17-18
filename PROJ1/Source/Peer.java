@@ -8,6 +8,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.security.NoSuchAlgorithmException;
 
 public class Peer implements RMITesting {
 
@@ -21,9 +22,9 @@ public class Peer implements RMITesting {
 	private ServiceChannel mdb;
 	private ServiceChannel mdr;
 	
-	private int chunkNo = 0; // TODO move to protocol state class
+	private ProtocolState currProtocol; // ASK concurrent hash map?
 	
-	// TODO document
+	// DOC document
 	public Peer(String protocolVersion, int peerID, String accessPoint, InetAddress mccAddr, int mccPort, InetAddress mdbAddr, int mdbPort, InetAddress mdrAddr, int mdrPort) {
 		
 		this.protocolVersion = protocolVersion;
@@ -57,8 +58,8 @@ public class Peer implements RMITesting {
         }
 	}
 	
-	// TODO document
-	public void receiveLoop() {
+	// DOC document
+	public void receiveLoop() throws IOException {
 		
 		while(true) {
 			
@@ -76,12 +77,15 @@ public class Peer implements RMITesting {
 		        directory.mkdir();
 		    }
 		    
+		    // TODO create directory for each file
+		    // TODO do not store own chunks
+		    
 		    // Output data to file
 			FileOutputStream output;
 			try {
-				output = new FileOutputStream("./Storage/" + headerFields[3] + "." + headerFields[4]);
+				output = new FileOutputStream("./Storage/" + headerFields[3] + "." + headerFields[4]); // TODO use Peer ID for folders
 			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
+				// CATCH Auto-generated catch block
 				e.printStackTrace();
 				continue;
 			}
@@ -92,24 +96,28 @@ public class Peer implements RMITesting {
 				output.write(bodyData);
 				output.close();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				// CATCH Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 	}
-	
+
 	@Override
-	public void remoteBackup(String filepath, int repDeg) throws RemoteException {
+	public void remoteBackup(String filepath, int repDeg) throws IOException, NoSuchAlgorithmException {
 		
 		// TODO backup protocol
 		
 		String backStarted = "backup: " + filepath + " - " + repDeg;
 		SystemManager.getInstance().logPrint(backStarted, SystemManager.LogLevel.NORMAL);
 		
-		ServiceMessage sMsg = new ServiceMessage();
-		byte[] msg = sMsg.putChunk(this.protocolVersion, this.peerID, filepath, this.chunkNo, repDeg);
-		this.mdb.send(msg);
+		this.currProtocol = new ProtocolState(ProtocolState.ProtocolType.INIT_BACKUP);
+		this.currProtocol.initBackupState(this.protocolVersion, filepath, repDeg);
 		
+		// Prepare and send next PUTCHUNK message
+		ServiceMessage sMsg = new ServiceMessage();
+		byte[] msg = sMsg.putChunk(this.peerID, this.currProtocol);
+		
+		this.mdb.send(msg);
 		return;
 	}
 	

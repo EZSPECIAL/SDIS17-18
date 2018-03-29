@@ -20,3 +20,18 @@ mdb         - IP:port of multicast data backup channel
 mdr         - IP:port of multicast data restore channel
 logLevel    - NONE, NORMAL, DEBUG, VERBOSE
 logMethod   - CONSOLE, FILE, BOTH
+
+---------------------
+PEER
+---------------------
+
+    - identified by ID (1 to INT_MAX)
+
+---------------------
+MULTICAST CHANNELS
+---------------------
+
+    - mcc (control)
+    - mdb (data backup)
+    - mdr (data restore)
+    - created with IP:port pair through command line arguments

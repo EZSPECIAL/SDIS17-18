@@ -13,7 +13,7 @@ public class ServiceChannel {
 	
 	private static final int packetSize = 65000;
 	
-	// TODO document
+	// DOC document
 	public ServiceChannel(InetAddress addr, int port, String channelName) {
 		
 		this.addr = addr;
@@ -23,48 +23,36 @@ public class ServiceChannel {
 		try {
 			this.socket = new MulticastSocket(port);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			// CATCH Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
-	// TODO document
-	public DatagramPacket listen() {
+	// DOC document
+	public DatagramPacket listen() throws IOException {
 		
 		byte[] binData = new byte[packetSize];
 		DatagramPacket packet = new DatagramPacket(binData, binData.length);
 		
         String msg = "receiving packets on " + this.channelName;
         SystemManager.getInstance().logPrint(msg, SystemManager.LogLevel.DEBUG);
-		
-		try {
-			socket.joinGroup(this.addr);
-			socket.receive(packet);
-			socket.leaveGroup(this.addr);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+
+        socket.joinGroup(this.addr);
+        socket.receive(packet);
+        socket.leaveGroup(this.addr);
 		
 		return packet;
 	}
 	
-	// TODO document
-	public void send(byte[] data) {
+	// DOC document
+	public void send(byte[] data) throws IOException {
 		
 		DatagramPacket packet = new DatagramPacket(data, data.length, this.addr, this.port);
 		
         String sent = "sending packets on " + this.channelName;
         SystemManager.getInstance().logPrint(sent, SystemManager.LogLevel.DEBUG);
-        String dataContent = "data [" + data + "]";
-        SystemManager.getInstance().logPrint(dataContent, SystemManager.LogLevel.VERBOSE);
-		
-		try {
-			this.socket.send(packet);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+
+		this.socket.send(packet);
 	}
 
 }

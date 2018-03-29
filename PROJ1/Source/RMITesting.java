@@ -1,5 +1,7 @@
+import java.io.IOException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * Interface used for RMI of backup service methods.
@@ -15,8 +17,10 @@ public interface RMITesting extends Remote {
 	 * @param filepath path to file to backup
 	 * @param repDeg desired number of copies of the file in the system
 	 * @throws RemoteException
+	 * @throws IOException 
+	 * @throws NoSuchAlgorithmException 
 	 */
-	void remoteBackup(String filepath, int repDeg) throws RemoteException;
+	void remoteBackup(String filepath, int repDeg) throws IOException, NoSuchAlgorithmException;
 	
 	/**
 	 * Triggers the restore protocol with the invoking Peer as Initiator Peer.
