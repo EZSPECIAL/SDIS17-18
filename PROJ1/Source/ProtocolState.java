@@ -24,7 +24,16 @@ public class ProtocolState {
 	private String filepath;
 	private String filename;
 	private String hashHex;
+	
+	private boolean isFinished;
 
+	/**
+	 * Default constructor used for populating Protocol State fields to avoid checking for null.
+	 */
+	public ProtocolState() {
+		this.isFinished = true;
+	}
+	
 	/**
 	 * A Protocol State object maintains the state for a specific protocol running on the backup system.
 	 * It keeps the relevant info needed for each protocol and is initiated by calling specific functions
@@ -34,6 +43,7 @@ public class ProtocolState {
 	 */
 	public ProtocolState(ProtocolType protocolType) {
 		this.protocolType = protocolType;
+		this.isFinished = false;
 	}
 
 	/**
@@ -65,6 +75,14 @@ public class ProtocolState {
 		return true;
 	}
 
+	// DOC
+	public void initBackupResponseState(String protocolVersion, String hash, String chunkNo) {
+		
+		this.protocolVersion = protocolVersion;
+		this.hashHex = hash;
+		this.currentChunkNo = Long.parseLong(chunkNo);
+	}
+	
 	/**
 	 * Calculates the total chunks of {@value #chunkSize} bytes needed to backup the file specified.
 	 * 
@@ -180,5 +198,33 @@ public class ProtocolState {
 	 */
 	public String getHashHex() {
 		return hashHex;
+	}
+
+	/**
+	 * @return the chunksize
+	 */
+	public static int getChunksize() {
+		return chunkSize;
+	}
+
+	/**
+	 * @return the maxchunktotal
+	 */
+	public static int getMaxchunktotal() {
+		return maxChunkTotal;
+	}
+
+	/**
+	 * @return whether the protocol instance has terminated
+	 */
+	public boolean isFinished() {
+		return isFinished;
+	}
+
+	/**
+	 * @param isFinished whether the protocol instance has terminated
+	 */
+	public void setFinished(boolean isFinished) {
+		this.isFinished = isFinished;
 	}
 }

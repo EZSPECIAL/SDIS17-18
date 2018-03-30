@@ -2,6 +2,7 @@
 ORDER
 ---------------------
 
+    - receiveLoop block to function
     - STORED message handling
     - Backup initiator count STORED
     - Backup initiator delays on resend PUTCHUNK

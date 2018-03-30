@@ -35,7 +35,7 @@ public class Peer implements RMITesting {
 	private ServiceChannel mdb;
 	private ServiceChannel mdr;
 	
-	private ProtocolState currProtocol; // ASK concurrent hash map?
+	private ProtocolState currProtocol = new ProtocolState(); // ASK concurrent hash map?
 	
 	/**
 	 * A Peer object handles protocol initiation and also requests for protocol handling from other initiators on known UDP multicast channels.
@@ -84,49 +84,78 @@ public class Peer implements RMITesting {
         }
 	}
 	
-	// DOC document
+	// DOC
 	public void receiveLoop() throws IOException {
 		
 		while(true) {
+
+			// TODO ProtocolState chunkNo, etc
+			// TODO STORED message response (random 0 to 400ms delay)
+			// TODO timeout on PUTCHUNK
 			
 			DatagramPacket packet = this.mdb.listen();
 
-			// Validate message as backup system standard message
+			// Validate message as backup system message, then validate and extract the header
 			ServiceMessage parser = new ServiceMessage();
 			if(!parser.findHeaderIndices(packet)) continue;
-			
-			// Get header/body and validate header as valid protocol and fields
 			String[] headerFields = parser.stripHeader(packet);
 			if(headerFields == null) continue;
-			byte[] bodyData = parser.stripBody(packet);
 			
-			// TODO ProtocolState chunkNo, etc
-			// TODO STORED message response
-		    
-		    // Check if this Peer is the Peer that requested the backup
-		    if(Integer.parseInt(headerFields[senderI]) == this.peerID) {
-		    	SystemManager.getInstance().logPrint("own chunk so won't store", SystemManager.LogLevel.DEBUG);
-		    	continue;
-		    }
-			
-		    // Create file structure for this chunk
-			String peerFolder = "./" + peerFolderPrefix + this.peerID + peerFolderSuffix;
-		    String chunkFolder = peerFolder + "/" + headerFields[hashI];
-		    String chunkPath = chunkFolder + "/" + headerFields[backChunkNoI];
-		    this.createDirIfNotExists(peerFolder);
-		    this.createDirIfNotExists(chunkFolder);
-		    
-		    // Write chunk data to file only if it doesn't already exist
-		    File file = new File(chunkPath);
-		    if(!file.exists()) {
-		    	
-		    	FileOutputStream output = new FileOutputStream(file);
-		    	output.write(bodyData);
-		    	output.close();
-		    	
-				SystemManager.getInstance().logPrint("written: " + headerFields[hashI] + "." + headerFields[backChunkNoI], SystemManager.LogLevel.NORMAL);
-		    } else SystemManager.getInstance().logPrint("chunk already stored", SystemManager.LogLevel.DEBUG);
+			this.runProtocol(headerFields, packet);
 		}
+	}
+	
+	// DOC
+	private void runProtocol(String[] fields, DatagramPacket packet) throws IOException {
+		
+		String protocol = fields[protocolI].toUpperCase();
+		
+		// Run handler for each known protocol type
+		switch(protocol) {
+		
+		// BACKUP protocol initiated
+		case "PUTCHUNK":
+
+			handleBackup(fields, packet);
+			break;
+		}
+	}
+	
+	// DOC
+	private void handleBackup(String[] fields, DatagramPacket packet) throws IOException {
+	
+		ServiceMessage parser = new ServiceMessage();
+		byte[] bodyData = parser.stripBody(packet);
+		
+	    // Check if this Peer is the Peer that requested the backup
+	    if(Integer.parseInt(fields[senderI]) == this.peerID) {
+	    	SystemManager.getInstance().logPrint("own chunk so won't store", SystemManager.LogLevel.DEBUG);
+	    	return;
+	    }
+		
+	    // Create file structure for this chunk
+		String peerFolder = "./" + peerFolderPrefix + this.peerID + peerFolderSuffix;
+	    String chunkFolder = peerFolder + "/" + fields[hashI];
+	    String chunkPath = chunkFolder + "/" + fields[backChunkNoI];
+	    this.createDirIfNotExists(peerFolder);
+	    this.createDirIfNotExists(chunkFolder);
+	    
+	    // Write chunk data to file only if it doesn't already exist
+	    File file = new File(chunkPath);
+	    if(!file.exists()) {
+	    	
+	    	FileOutputStream output = new FileOutputStream(file);
+	    	output.write(bodyData);
+	    	output.close();
+	    	
+			SystemManager.getInstance().logPrint("written: " + fields[hashI] + "." + fields[backChunkNoI], SystemManager.LogLevel.NORMAL);
+	    } else SystemManager.getInstance().logPrint("chunk already stored", SystemManager.LogLevel.DEBUG);
+	    
+	    ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.BACKUP);
+	    state.initBackupResponseState(this.protocolVersion, fields[hashI], fields[backChunkNoI]);
+	    
+	    byte[] msg = parser.createStoredMsg(this.peerID, state);
+	    this.mcc.send(msg);
 	}
 	
 	/**
@@ -160,7 +189,7 @@ public class Peer implements RMITesting {
 		
 			// Prepare and send next PUTCHUNK message
 			ServiceMessage sMsg = new ServiceMessage();
-			byte[] msg = sMsg.putchunk(this.peerID, this.currProtocol);
+			byte[] msg = sMsg.createPutchunkMsg(this.peerID, this.currProtocol);
 			this.mdb.send(msg);
 
 			// Increment current chunk number and finish if last chunk has been sent
@@ -168,6 +197,8 @@ public class Peer implements RMITesting {
 			Thread.sleep(500);
 		}
 		
+		// Finish protocol instance
+		this.currProtocol.setFinished(true);
 		SystemManager.getInstance().logPrint("finished " + backMsg, SystemManager.LogLevel.NORMAL);
 	}
 	

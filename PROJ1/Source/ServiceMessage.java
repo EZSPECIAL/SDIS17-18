@@ -42,7 +42,7 @@ public class ServiceMessage {
 	 * @param state the Protocol State object relevant to this operation
 	 * @return the binary data representing the message
 	 */
-	public byte[] putchunk(int peerID, ProtocolState state) throws IOException {
+	public byte[] createPutchunkMsg(int peerID, ProtocolState state) throws IOException {
 
 		// Get binary file data
 	    byte[] buf = new byte[dataSize];
@@ -58,6 +58,17 @@ public class ServiceMessage {
 		
 		if(nRead <= 0) return header.getBytes();
 		else return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
+	}
+	
+	// DOC
+	// STORED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+	public byte[] createStoredMsg(int peerID, ProtocolState state) {
+		
+		String header = "STORED " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
+		
+        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
+        
+        return header.getBytes();
 	}
 	
 	/**
