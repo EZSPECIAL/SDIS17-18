@@ -99,6 +99,8 @@ public class TestApp {
 			cmdErr("unrecognized protocol \"" + args[protocolI] + "\"!", "all");
 			break;
 		}
+		
+		System.out.flush(); // ASK working?
 	}
 
 	/**
@@ -112,13 +114,13 @@ public class TestApp {
 		try {
 			remoteObj.remoteBackup(filepath, repDeg);
 		} catch(IOException e) {
-			System.err.println("TestApp: IO exception executing remote backup " + e.toString());
+			System.out.println("TestApp: IO exception executing remote backup " + e.toString());
 			e.printStackTrace();
 		} catch (NoSuchAlgorithmException e) {
-			System.err.println("TestApp: no such algorithm exception executing remote backup " + e.toString());
+			System.out.println("TestApp: no such algorithm exception executing remote backup " + e.toString());
 			e.printStackTrace();
 		} catch (InterruptedException e) {
-			System.err.println("TestApp: interrupted thread exception executing remote backup " + e.toString());
+			System.out.println("TestApp: interrupted thread exception executing remote backup " + e.toString());
 			e.printStackTrace();
 		}
 	}
@@ -133,7 +135,7 @@ public class TestApp {
 		try {
 			remoteObj.remoteRestore(filepath);
 		} catch(RemoteException e) {
-			System.err.println("TestApp: exception executing remote restore " + e.toString());
+			System.out.println("TestApp: exception executing remote restore " + e.toString());
 			e.printStackTrace();
 		}
 	}
@@ -148,7 +150,7 @@ public class TestApp {
 		try {
 			remoteObj.remoteDelete(filepath);
 		} catch(RemoteException e) {
-			System.err.println("TestApp: exception executing remote delete " + e.toString());
+			System.out.println("TestApp: exception executing remote delete " + e.toString());
 			e.printStackTrace();
 		}
 	}
@@ -163,7 +165,7 @@ public class TestApp {
 		try {
 			remoteObj.remoteReclaim(maxKB);
 		} catch(RemoteException e) {
-			System.err.println("TestApp: exception executing remote reclaim " + e.toString());
+			System.out.println("TestApp: exception executing remote reclaim " + e.toString());
 			e.printStackTrace();
 		}
 	}
@@ -176,7 +178,7 @@ public class TestApp {
 //		try {
 //			String result = remoteObj.remoteGetInfo(); // TODO handle result
 //		} catch(RemoteException e) {
-//			System.err.println("TestApp: exception executing remote reclaim " + e.toString());
+//			System.out.println("TestApp: exception executing remote reclaim " + e.toString());
 //			e.printStackTrace();
 //		}
 	}
@@ -196,9 +198,9 @@ public class TestApp {
 			return stub;
 
 		} catch(NotBoundException e) {
-			System.err.println("TestApp: \"" + accessPoint + "\" is not registered for RMI!");
+			System.out.println("TestApp: \"" + accessPoint + "\" is not registered for RMI!");
 		} catch(Exception e) {
-			System.err.println("TestApp: exception looking up registry " + e.toString());
+			System.out.println("TestApp: exception looking up registry " + e.toString());
 			e.printStackTrace();
 		}
 
@@ -269,7 +271,7 @@ public class TestApp {
 	 */
 	private static void cmdErr(String message, String protocol) {
 		
-		System.err.println("TestApp: " + message);
+		System.out.println("TestApp: " + message);
 		System.out.println("Example usage:");
 
 		if(protocol.equals("all") || protocol.equals("backup")) System.out.println("\t java TestApp Peer1 BACKUP test1.pdf 3");
@@ -288,7 +290,7 @@ public class TestApp {
 	 */
 	private static void printErrExit(String message) {
 		
-		System.err.println("TestApp: " + message);
+		System.out.println("TestApp: " + message);
 		System.exit(-1);
 	}
 }

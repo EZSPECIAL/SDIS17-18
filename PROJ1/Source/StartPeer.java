@@ -33,13 +33,13 @@ public class StartPeer {
 		//System.setProperty("java.net.preferIPv4Stack", "true"); ASK needed?
 		
 		parseArguments(args);
-		
 		peer.initRMI();
 		
 		try {
 			peer.receiveLoop();
 		} catch (IOException e) {
-			// CATCH Auto-generated catch block
+
+			SystemManager.getInstance().logPrint("I/O Exception during Peer file operations!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
 		}
 	}
@@ -178,7 +178,7 @@ public class StartPeer {
 	 */
 	private static void cmdErr(String message) {
 		
-		System.err.println("StartPeer: " + message);
+		System.out.println("StartPeer: " + message);
 		
 		System.out.println("Regular usage:");
 		System.out.println("\t java StartPeer 1.0 1 Peer1 224.0.0.1:1500 224.0.0.2:1600 224.0.0.3:1700");
@@ -198,7 +198,7 @@ public class StartPeer {
 	 */
 	private static void printErrExit(String message) {
 		
-		System.err.println("StartPeer: " + message);
+		System.out.println("StartPeer: " + message);
 		System.exit(-1);
 	}
 	

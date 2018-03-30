@@ -105,8 +105,11 @@ public class SystemManager {
 			toCreate.createNewFile();
 			Files.write(toWrite, lines, Charset.forName("UTF-8"), StandardOpenOption.APPEND);
 		} catch (IOException e) {
-			// CATCH Auto-generated catch block
-			e.printStackTrace();
+			if(logLevel.equals(LogLevel.VERBOSE)) {
+				System.out.println("IO exception on log write");
+				e.printStackTrace();
+				System.out.flush();
+			}
 		}
 	}
 	

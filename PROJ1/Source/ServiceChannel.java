@@ -13,7 +13,14 @@ public class ServiceChannel {
 	
 	private static final int packetSize = 65000;
 	
-	// DOC document
+	/**
+	 * A Service Channel is an object that provides methods for receiving and sending UDP packets
+	 * over a multicast socket created on invocation of its constructor.
+	 * 
+	 * @param addr address of the channel
+	 * @param port port for the channel
+	 * @param channelName the channel name
+	 */
 	public ServiceChannel(InetAddress addr, int port, String channelName) {
 		
 		this.addr = addr;
@@ -23,12 +30,19 @@ public class ServiceChannel {
 		try {
 			this.socket = new MulticastSocket(port);
 		} catch (IOException e) {
-			// CATCH Auto-generated catch block
+			
+	        String msg = "failed to open socket with name \"" + channelName + "\"";
+	        SystemManager.getInstance().logPrint(msg, SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 	
-	// DOC document
+	/**
+	 * Wait for a packet on the UDP socket and returns it.
+	 * 
+	 * @return the packet received
+	 */
 	public DatagramPacket listen() throws IOException {
 		
 		byte[] binData = new byte[packetSize];
@@ -43,8 +57,12 @@ public class ServiceChannel {
 		
 		return packet;
 	}
-	
-	// DOC document
+
+	/**
+	 * Sends a packet on the UDP socket.
+	 * 
+	 * @param data the data to send
+	 */
 	public void send(byte[] data) throws IOException {
 		
 		DatagramPacket packet = new DatagramPacket(data, data.length, this.addr, this.port);

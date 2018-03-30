@@ -1,12 +1,13 @@
 import java.io.File;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+
+import javax.xml.bind.DatatypeConverter;
 
 public class ProtocolState {
 	
@@ -24,7 +25,13 @@ public class ProtocolState {
 	private String filename;
 	private String hashHex;
 
-	// DOC document
+	/**
+	 * A Protocol State object maintains the state for a specific protocol running on the backup system.
+	 * It keeps the relevant info needed for each protocol and is initiated by calling specific functions
+	 * that handle each protocol type.
+	 * 
+	 * @param protocolType the protocol type
+	 */
 	public ProtocolState(ProtocolType protocolType) {
 		this.protocolType = protocolType;
 	}
@@ -57,15 +64,17 @@ public class ProtocolState {
 		
 		return true;
 	}
-	
-	// DOC document
+
+	/**
+	 * Calculates the total chunks of {@value #chunkSize} bytes needed to backup the file specified.
+	 * 
+	 * @param filepath the file path to calculate total chunks from
+	 * @return the numeric value of the total chunks
+	 */
 	private long getTotalChunks(String filepath) throws IOException {
-		
+
 		Path path = Paths.get(filepath);
 		Files.size(path);
-
-		// Calculate total 64KB chunks and check if size is multiple of 64KB
-		//int result = (int) Files.size(path) / chunkSize + ((Files.size(path) % chunkSize == 0) ? 0 : 1);
 		long result = Files.size(path) / chunkSize + 1;
 		
 		String totalChunks = "total chunks: " + result + " - file multiple of 64KB: " + (Files.size(path) % chunkSize == 0);
@@ -73,8 +82,14 @@ public class ProtocolState {
 		
 		return result;
 	}
-	
-	// DOC document
+
+	/**
+	 * Computes a SHA256 hash based on the specified file path. The function uses the file's
+	 * filename, last modified date and last accessed date to add more uniqueness to the hash.
+	 * 
+	 * @param filepath the file path to use as base for the hash
+	 * @return textual representation of the hexadecimal values of the SHA256
+	 */
 	private String computeSHA256(String filepath) throws IOException, NoSuchAlgorithmException {
 		
 		File file = new File(filepath);
@@ -91,7 +106,8 @@ public class ProtocolState {
         // Hash the string with SHA256
 		MessageDigest digest = MessageDigest.getInstance("SHA-256");
 		byte[] hash = digest.digest(toHash.getBytes(StandardCharsets.UTF_8));
-		String hashHex = String.format("%040X", new BigInteger(1, hash));
+		
+		String hashHex = DatatypeConverter.printHexBinary(hash);
 		
         String afterHash = "hash: " + hashHex;
         SystemManager.getInstance().logPrint(afterHash, SystemManager.LogLevel.VERBOSE);

@@ -1,5 +1,4 @@
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -12,11 +11,19 @@ import java.security.NoSuchAlgorithmException;
 
 public class Peer implements RMITesting {
 
+	// Peer storage area fixed strings
 	private static final String peerFolderPrefix = "Peer_";
 	private static final String peerFolderSuffix = "_Area";
+	
+	// General header indices
+	private static final int protocolI = 0;
+	private static final int protocolVersionI = 1;
 	private static final int senderI = 2;
 	private static final int hashI = 3;
-	private static final int chunkNoI = 4;
+	
+	// Backup header indices
+	private static final int backChunkNoI = 4;
+	private static final int backRepDegI = 5;
 	
 	// Peer info
 	private String protocolVersion;
@@ -30,7 +37,20 @@ public class Peer implements RMITesting {
 	
 	private ProtocolState currProtocol; // ASK concurrent hash map?
 	
-	// DOC document
+	/**
+	 * A Peer object handles protocol initiation and also requests for protocol handling from other initiators on known UDP multicast channels.
+	 * Peers have the function of managing a file backup service and store information about their own database and what they believe the system currently has stored.
+	 * 
+	 * @param protocolVersion the backup system version
+	 * @param peerID the numeric identifier of the Peer
+	 * @param accessPoint service access point (RMI Object name)
+	 * @param mccAddr address of the multicast control channel
+	 * @param mccPort port for the multicast control channel
+	 * @param mdbAddr address of the multicast data backup channel
+	 * @param mdbPort port for the multicast data backup channel
+	 * @param mdrAddr address of the multicast data restore channel
+	 * @param mdrPort port for the multicast data restore channel
+	 */
 	public Peer(String protocolVersion, int peerID, String accessPoint, InetAddress mccAddr, int mccPort, InetAddress mdbAddr, int mdbPort, InetAddress mdrAddr, int mdrPort) {
 		
 		this.protocolVersion = protocolVersion;
@@ -77,6 +97,7 @@ public class Peer implements RMITesting {
 			
 			// Get header/body and validate header as valid protocol and fields
 			String[] headerFields = parser.stripHeader(packet);
+			if(headerFields == null) continue;
 			byte[] bodyData = parser.stripBody(packet);
 			
 			// TODO ProtocolState chunkNo, etc
@@ -91,7 +112,7 @@ public class Peer implements RMITesting {
 		    // Create file structure for this chunk
 			String peerFolder = "./" + peerFolderPrefix + this.peerID + peerFolderSuffix;
 		    String chunkFolder = peerFolder + "/" + headerFields[hashI];
-		    String chunkPath = chunkFolder + "/" + headerFields[chunkNoI];
+		    String chunkPath = chunkFolder + "/" + headerFields[backChunkNoI];
 		    this.createDirIfNotExists(peerFolder);
 		    this.createDirIfNotExists(chunkFolder);
 		    
@@ -103,7 +124,7 @@ public class Peer implements RMITesting {
 		    	output.write(bodyData);
 		    	output.close();
 		    	
-				SystemManager.getInstance().logPrint("written: " + headerFields[hashI] + "." + headerFields[chunkNoI], SystemManager.LogLevel.NORMAL);
+				SystemManager.getInstance().logPrint("written: " + headerFields[hashI] + "." + headerFields[backChunkNoI], SystemManager.LogLevel.NORMAL);
 		    } else SystemManager.getInstance().logPrint("chunk already stored", SystemManager.LogLevel.DEBUG);
 		}
 	}
@@ -139,7 +160,7 @@ public class Peer implements RMITesting {
 		
 			// Prepare and send next PUTCHUNK message
 			ServiceMessage sMsg = new ServiceMessage();
-			byte[] msg = sMsg.putChunk(this.peerID, this.currProtocol);
+			byte[] msg = sMsg.putchunk(this.peerID, this.currProtocol);
 			this.mdb.send(msg);
 
 			// Increment current chunk number and finish if last chunk has been sent
@@ -154,9 +175,11 @@ public class Peer implements RMITesting {
 	public void remoteRestore(String filepath) throws RemoteException {
 		
 		// TODO restore protocol
-		// TODO proper log message
-		
-		System.out.println("restore: " + filepath);
+
+		String resMsg = "restore: " + filepath;
+		SystemManager.getInstance().logPrint("started " + resMsg, SystemManager.LogLevel.NORMAL);
+		SystemManager.getInstance().logPrint("finished " + resMsg, SystemManager.LogLevel.NORMAL);
+
 		return;
 	}
 
@@ -164,9 +187,11 @@ public class Peer implements RMITesting {
 	public void remoteDelete(String filepath) throws RemoteException {
 		
 		// TODO delete protocol
-		// TODO proper log message
 		
-		System.out.println("delete: " + filepath);
+		String delMsg = "delete: " + filepath;
+		SystemManager.getInstance().logPrint("started " + delMsg, SystemManager.LogLevel.NORMAL);
+		SystemManager.getInstance().logPrint("finished " + delMsg, SystemManager.LogLevel.NORMAL);
+
 		return;
 	}
 
@@ -174,9 +199,11 @@ public class Peer implements RMITesting {
 	public void remoteReclaim(int maxKB) throws RemoteException {
 		
 		// TODO reclaim protocol
-		// TODO proper log message
+
+		String reclMsg = "reclaim: " + maxKB;
+		SystemManager.getInstance().logPrint("started " + reclMsg, SystemManager.LogLevel.NORMAL);
+		SystemManager.getInstance().logPrint("finished " + reclMsg, SystemManager.LogLevel.NORMAL);
 		
-		System.out.println("reclaim: " + maxKB);
 		return;
 	}
 
@@ -184,9 +211,7 @@ public class Peer implements RMITesting {
 	public String remoteGetInfo() throws RemoteException {
 		
 		// TODO info protocol
-		// TODO proper log message
-		
-		System.out.println("info");
+
 		return null;
 	}
 

@@ -2,8 +2,9 @@
 ORDER
 ---------------------
 
-    - backup - receiver side STORED and header validation
-    - add debug flag?
+    - STORED message handling
+    - Backup initiator count STORED
+    - Backup initiator delays on resend PUTCHUNK
     - swap to linux
     - delete
     - restore

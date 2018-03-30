@@ -1,2 +1,14 @@
-protocolVersion      the backup system version
-desiredRepDeg        desired replication degree
+protocolVersion         the backup system version
+peerID / senderID       the numeric identifier of the Peer
+desiredRepDeg           desired replication degree
+accessPoint             service access point (RMI Object name)
+
+channelAddr             address of the <channel>
+channelPort             port for the <channel>
+channelName             the channel name
+
+protocolType            the protocol type
+filepath                the file path
+
+state                   the Protocol State object relevant to this operation
+packet                  the packet to extract the header from
