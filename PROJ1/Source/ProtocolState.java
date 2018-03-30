@@ -13,11 +13,11 @@ public class ProtocolState {
 	public enum ProtocolType {INIT_BACKUP, BACKUP, INIT_RESTORE, RESTORE, INIT_DELETE, DELETE, INIT_RECLAIM, RECLAIM}
 	
 	private static final int chunkSize = 64000;
+	private static final int maxChunkTotal = 1000001;
 	
 	private ProtocolType protocolType;
-	private int chunkTotal;
-	private boolean isSizeMultiple;
-	private int currentChunkNo;
+	private long chunkTotal;
+	private long currentChunkNo;
 	private int desiredRepDeg;
 	private String protocolVersion;
 	private String filepath;
@@ -28,33 +28,47 @@ public class ProtocolState {
 	public ProtocolState(ProtocolType protocolType) {
 		this.protocolType = protocolType;
 	}
-	
-	// DOC document
-	public void initBackupState(String protocolVersion, String filepath, int desiredRepDeg) throws NoSuchAlgorithmException, IOException {
+
+	/**
+	 * Initialises the protocol state object for a backup procedure, calculates the total number of chunks of the file and the SHA256 hash
+	 * of the filename and metadata. Returns whether initialisation was successful.
+	 * 
+	 * @param protocolVersion the backup system version
+	 * @param filepath file path of the file to backup
+	 * @param desiredRepDeg desired replication degree
+	 * @return whether initialisation was successful.
+	 */
+	public boolean initBackupState(String protocolVersion, String filepath, int desiredRepDeg) throws NoSuchAlgorithmException, IOException {
 		
 		this.protocolVersion = protocolVersion;
 		this.filepath = filepath;
+		
+		// Validate total number of chunks
 		this.chunkTotal = this.getTotalChunks(filepath);
+		if(this.chunkTotal > maxChunkTotal) return false;
+		
 		this.currentChunkNo = 0;
 		this.desiredRepDeg = desiredRepDeg;
 		
+		// Compute SHA256 of given filename
 		File file = new File(filepath);
 		this.filename = file.getName();
-		
 		this.hashHex = computeSHA256(filepath);
+		
+		return true;
 	}
 	
 	// DOC document
-	private int getTotalChunks(String filepath) throws IOException {
+	private long getTotalChunks(String filepath) throws IOException {
 		
 		Path path = Paths.get(filepath);
 		Files.size(path);
 
 		// Calculate total 64KB chunks and check if size is multiple of 64KB
-		int result = (int) Files.size(path) / chunkSize + ((Files.size(path) % chunkSize == 0) ? 0 : 1);
-		this.isSizeMultiple = (Files.size(path) % chunkSize == 0) ? true : false;
-
-		String totalChunks = "total chunks: " + result + " - file multiple of 64KB: " + this.isSizeMultiple;
+		//int result = (int) Files.size(path) / chunkSize + ((Files.size(path) % chunkSize == 0) ? 0 : 1);
+		long result = Files.size(path) / chunkSize + 1;
+		
+		String totalChunks = "total chunks: " + result + " - file multiple of 64KB: " + (Files.size(path) % chunkSize == 0);
 		SystemManager.getInstance().logPrint(totalChunks, SystemManager.LogLevel.VERBOSE);
 		
 		return result;
@@ -86,6 +100,17 @@ public class ProtocolState {
 	}
 
 	/**
+	 * Increments current chunk number being processed by 1 and returns whether final chunk has been reached.
+	 * 
+	 * @return whether chunks are still available
+	 */
+	public boolean incrementCurrentChunkNo() {
+		this.currentChunkNo++;
+		if(this.chunkTotal == this.currentChunkNo) return false;
+		else return true;
+	}
+	
+	/**
 	 * @return the protocol type enumerator
 	 */
 	public ProtocolType getProtocolType() {
@@ -95,21 +120,14 @@ public class ProtocolState {
 	/**
 	 * @return the total number of chunks
 	 */
-	public int getChunkTotal() {
+	public long getChunkTotal() {
 		return chunkTotal;
-	}
-
-	/**
-	 * @return whether file size is multiple of chunk size
-	 */
-	public boolean isSizeMultiple() {
-		return isSizeMultiple;
 	}
 
 	/**
 	 * @return the current chunk number being processed
 	 */
-	public int getCurrentChunkNo() {
+	public long getCurrentChunkNo() {
 		return currentChunkNo;
 	}
 

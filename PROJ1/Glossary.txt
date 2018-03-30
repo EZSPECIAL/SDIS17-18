@@ -1,0 +1,2 @@
+protocolVersion      the backup system version
+desiredRepDeg        desired replication degree

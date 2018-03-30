@@ -51,7 +51,7 @@ public class TestApp {
 			break;
 			
 		case "backupenh":
-			// TODO remote method
+			// TODO remote method, confirm protocol version
 			break;
 
 		// Validate filepath and run remote restore method
@@ -64,7 +64,7 @@ public class TestApp {
 			break;
 			
 		case "restoreenh":
-			// TODO remote method
+			// TODO remote method, confirm protocol version
 			break;
 			
 		// Validate filepath and run remote delete method
@@ -77,7 +77,7 @@ public class TestApp {
 			break;
 			
 		case "deleteenh":
-			// TODO remote method
+			// TODO remote method, confirm protocol version
 			break;
 			
 		// Validate max disk space parameter and run remote reclaim method
@@ -112,10 +112,13 @@ public class TestApp {
 		try {
 			remoteObj.remoteBackup(filepath, repDeg);
 		} catch(IOException e) {
-			System.err.println("TestApp: exception executing remote backup " + e.toString());
+			System.err.println("TestApp: IO exception executing remote backup " + e.toString());
 			e.printStackTrace();
 		} catch (NoSuchAlgorithmException e) {
-			System.err.println("TestApp: exception executing remote backup " + e.toString());
+			System.err.println("TestApp: no such algorithm exception executing remote backup " + e.toString());
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			System.err.println("TestApp: interrupted thread exception executing remote backup " + e.toString());
 			e.printStackTrace();
 		}
 	}

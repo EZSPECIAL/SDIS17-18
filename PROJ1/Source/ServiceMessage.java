@@ -21,20 +21,18 @@ public class ServiceMessage {
 
 		// Get binary file data
 	    byte[] buf = new byte[dataSize];
-		int nRead = this.getData(state.getFilepath(), buf);
+		int nRead = this.getData(state.getFilepath(), state.getCurrentChunkNo(), buf);
 		
         String readMsg = "putchunk nRead: " + nRead;
         SystemManager.getInstance().logPrint(readMsg, SystemManager.LogLevel.VERBOSE);
 	    
 	    // Merge header and body to single byte[]
 		String header = "PUTCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + " " + state.getDesiredRepDeg() + headerTermination;
-		return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
 
-	    // TODO check nRead for file end
-		// TODO file already backed up by this Peer
-		// TODO chunk no handling with ProtocolState
-		// TODO chunkNo up to 6 digits (max 64GB)
-		// TODO chunks multiple of 64KB
+        SystemManager.getInstance().logPrint(header, SystemManager.LogLevel.SERVICE_MSG);
+		
+		if(nRead <= 0) return header.getBytes();
+		else return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
 	}
 	
 	// DOC document
@@ -50,9 +48,10 @@ public class ServiceMessage {
 	}
 	
 	// DOC document
-	private int getData(String filepath, byte[] data) throws IOException {
+	private int getData(String filepath, long chunkNo, byte[] data) throws IOException {
 
 		FileInputStream input = new FileInputStream(filepath);
+		input.skip(chunkNo * dataSize);
 		int nRead = input.read(data, 0, dataSize);
 		input.close();
 		
@@ -89,7 +88,7 @@ public class ServiceMessage {
 		
 		// Separate header into string
 		String header = msg.substring(0, this.lineEndI);
-		SystemManager.getInstance().logPrint(header, SystemManager.LogLevel.DEBUG);
+		SystemManager.getInstance().logPrint("received: " + header, SystemManager.LogLevel.SERVICE_MSG);
 		
 		// Divide by fields
 		String[] headerFields = header.split("[ ]");

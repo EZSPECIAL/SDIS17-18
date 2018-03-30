@@ -20,7 +20,7 @@ public interface RMITesting extends Remote {
 	 * @throws IOException 
 	 * @throws NoSuchAlgorithmException 
 	 */
-	void remoteBackup(String filepath, int repDeg) throws IOException, NoSuchAlgorithmException;
+	void remoteBackup(String filepath, int repDeg) throws IOException, NoSuchAlgorithmException, InterruptedException;
 	
 	/**
 	 * Triggers the restore protocol with the invoking Peer as Initiator Peer.

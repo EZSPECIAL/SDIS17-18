@@ -2,7 +2,7 @@
 ORDER
 ---------------------
 
-    - backup - send multiples chunks
+    - backup - receiver side STORED and header validation
     - add debug flag?
     - swap to linux
     - delete
@@ -65,7 +65,6 @@ GENERAL
 
 Peers
 
-    - have a local folder that serves as their virtual HDD
     - have a max disk space and keep count of chunk disk space usage (start with 8MB)
 
 Generic message
@@ -212,16 +211,6 @@ EXTRAS
 QUESTIONS
 ---------------------
 
-|- Chunk size 0 counting for total
-
-|- Client: chunks occupy more space than allowed, does the Peer delete random chunks and send "REMOVED" msgs?
-|- Does deleting chunks trigger the "REMOVED" message or can only the Client trigger it by changing max space?
-
-|- Client: what's the "backup service id of the file"? SHA256 generated?
-|- Client: what's the chunk id? SHA256 + chunkNo?
-|- Client: can ID and perceived repDeg vary between local chunks and overall chunks?
-|- Client: why append "ENH" when Peers already have protocol version to know whether they're running enhancements or not
-
 RMI: sometimes Enter key is needed for output to appear in Peer/Server
 
 Filesystem delete - affects service?
@@ -231,8 +220,6 @@ count in non-volatile memory. This information can be useful if the peer runs ou
 the peer may try to free some space by evicting chunks whose actual replication degree is higher than the desired
 replication degree."
 (backup enhancement invalidates this?)
-
-RESTORE Enhancement general idea / interop (isn't TCP enough to solve it?)
 
 Offline Peer - doesn't this mean it loses all info? How can the delete enhancement work? How can "get info" work if the Peer loses info of what it initiated? What about syncing filelist between Peers?
 

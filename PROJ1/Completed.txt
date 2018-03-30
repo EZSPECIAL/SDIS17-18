@@ -26,6 +26,7 @@ PEER
 ---------------------
 
     - identified by ID (1 to INT_MAX)
+    - has a local folder that serves as their virtual HDD
 
 ---------------------
 MULTICAST CHANNELS

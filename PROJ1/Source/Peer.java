@@ -12,6 +12,12 @@ import java.security.NoSuchAlgorithmException;
 
 public class Peer implements RMITesting {
 
+	private static final String peerFolderPrefix = "Peer_";
+	private static final String peerFolderSuffix = "_Area";
+	private static final int senderI = 2;
+	private static final int hashI = 3;
+	private static final int chunkNoI = 4;
+	
 	// Peer info
 	private String protocolVersion;
 	private int peerID;
@@ -64,61 +70,84 @@ public class Peer implements RMITesting {
 		while(true) {
 			
 			DatagramPacket packet = this.mdb.listen();
+
+			// Validate message as backup system standard message
 			ServiceMessage parser = new ServiceMessage();
-			
-			// Parse header/body
 			if(!parser.findHeaderIndices(packet)) continue;
+			
+			// Get header/body and validate header as valid protocol and fields
 			String[] headerFields = parser.stripHeader(packet);
 			byte[] bodyData = parser.stripBody(packet);
 			
-			// Create Peer storage area
-		    File directory = new File("./Storage");
-		    if(!directory.exists()) {
-		        directory.mkdir();
+			// TODO ProtocolState chunkNo, etc
+			// TODO STORED message response
+		    
+		    // Check if this Peer is the Peer that requested the backup
+		    if(Integer.parseInt(headerFields[senderI]) == this.peerID) {
+		    	SystemManager.getInstance().logPrint("own chunk so won't store", SystemManager.LogLevel.DEBUG);
+		    	continue;
 		    }
-		    
-		    // TODO create directory for each file
-		    // TODO do not store own chunks
-		    
-		    // Output data to file
-			FileOutputStream output;
-			try {
-				output = new FileOutputStream("./Storage/" + headerFields[3] + "." + headerFields[4]); // TODO use Peer ID for folders
-			} catch (FileNotFoundException e) {
-				// CATCH Auto-generated catch block
-				e.printStackTrace();
-				continue;
-			}
-
-			SystemManager.getInstance().logPrint("writing file", SystemManager.LogLevel.DEBUG);
 			
-			try {
-				output.write(bodyData);
-				output.close();
-			} catch (IOException e) {
-				// CATCH Auto-generated catch block
-				e.printStackTrace();
-			}
+		    // Create file structure for this chunk
+			String peerFolder = "./" + peerFolderPrefix + this.peerID + peerFolderSuffix;
+		    String chunkFolder = peerFolder + "/" + headerFields[hashI];
+		    String chunkPath = chunkFolder + "/" + headerFields[chunkNoI];
+		    this.createDirIfNotExists(peerFolder);
+		    this.createDirIfNotExists(chunkFolder);
+		    
+		    // Write chunk data to file only if it doesn't already exist
+		    File file = new File(chunkPath);
+		    if(!file.exists()) {
+		    	
+		    	FileOutputStream output = new FileOutputStream(file);
+		    	output.write(bodyData);
+		    	output.close();
+		    	
+				SystemManager.getInstance().logPrint("written: " + headerFields[hashI] + "." + headerFields[chunkNoI], SystemManager.LogLevel.NORMAL);
+		    } else SystemManager.getInstance().logPrint("chunk already stored", SystemManager.LogLevel.DEBUG);
 		}
+	}
+	
+	/**
+	 * Creates directory specified by path if it doesn't already exist.
+	 * 
+	 * @param dirPath the directory path to create
+	 */
+	private void createDirIfNotExists(String dirPath) {
+		
+	    File directory = new File(dirPath);
+	    if(!directory.exists()) {
+	        directory.mkdir();
+	    }
 	}
 
 	@Override
-	public void remoteBackup(String filepath, int repDeg) throws IOException, NoSuchAlgorithmException {
+	public void remoteBackup(String filepath, int repDeg) throws IOException, NoSuchAlgorithmException, InterruptedException {
 		
-		// TODO backup protocol
+		String backMsg = "backup: " + filepath + " - " + repDeg;
+		SystemManager.getInstance().logPrint("started " + backMsg, SystemManager.LogLevel.NORMAL);
 		
-		String backStarted = "backup: " + filepath + " - " + repDeg;
-		SystemManager.getInstance().logPrint(backStarted, SystemManager.LogLevel.NORMAL);
-		
+		// Initialise protocol state for backing up the file
 		this.currProtocol = new ProtocolState(ProtocolState.ProtocolType.INIT_BACKUP);
-		this.currProtocol.initBackupState(this.protocolVersion, filepath, repDeg);
+		if(!this.currProtocol.initBackupState(this.protocolVersion, filepath, repDeg)) {
+			String backFileSize = "cannot backup files larger than 64GB!";
+			SystemManager.getInstance().logPrint(backFileSize, SystemManager.LogLevel.NORMAL);
+			return;
+		}
+
+		while(true) {
 		
-		// Prepare and send next PUTCHUNK message
-		ServiceMessage sMsg = new ServiceMessage();
-		byte[] msg = sMsg.putChunk(this.peerID, this.currProtocol);
+			// Prepare and send next PUTCHUNK message
+			ServiceMessage sMsg = new ServiceMessage();
+			byte[] msg = sMsg.putChunk(this.peerID, this.currProtocol);
+			this.mdb.send(msg);
+
+			// Increment current chunk number and finish if last chunk has been sent
+			if(!this.currProtocol.incrementCurrentChunkNo()) break;
+			Thread.sleep(500);
+		}
 		
-		this.mdb.send(msg);
-		return;
+		SystemManager.getInstance().logPrint("finished " + backMsg, SystemManager.LogLevel.NORMAL);
 	}
 	
 	@Override

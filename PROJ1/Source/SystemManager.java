@@ -14,7 +14,7 @@ import java.util.List;
 public class SystemManager {
 
 	// Enumerator classes for logging management.
-	public enum LogLevel {NONE, NORMAL, DEBUG, VERBOSE}
+	public enum LogLevel {NONE, NORMAL, SERVICE_MSG, DEBUG, VERBOSE}
 	public enum LogMethod {CONSOLE, FILE, BOTH}
 	
 	private static SystemManager singleton = new SystemManager();
@@ -75,7 +75,7 @@ public class SystemManager {
 	public void logPrint(String message, LogLevel desiredLogLevel) {
 		
 		if(logLevel.equals(LogLevel.NONE)) return;
-		
+
 		// Console printing handling
 		if(logMethod.equals(LogMethod.CONSOLE) || logMethod.equals(LogMethod.BOTH)) {
 			if(logLevel.ordinal() >= desiredLogLevel.ordinal()) {
