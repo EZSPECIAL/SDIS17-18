@@ -13,7 +13,7 @@ import javax.xml.bind.DatatypeConverter;
 
 public class ProtocolState {
 	
-	public enum ProtocolType {INIT_BACKUP, BACKUP, INIT_RESTORE, RESTORE, INIT_DELETE, DELETE, INIT_RECLAIM, RECLAIM}
+	public enum ProtocolType {NONE, BACKUP, RESTORE, DELETE, RECLAIM}
 	
 	private static final int chunkSize = 64000;
 	private static final int maxChunkTotal = 1000001;
@@ -41,10 +41,12 @@ public class ProtocolState {
 	private boolean isFinished;
 
 	/**
-	 * Default constructor used for populating Protocol State fields to avoid checking for null.
+	 * Constructs a ProtocolState object used only for its parsing and storage capabilities and not for tracking
+	 * the progress of a given ProtocolType.
 	 */
 	public ProtocolState(ServiceMessage parser) {
 		this.parser = parser;
+		this.protocolType = ProtocolType.NONE;
 		this.isFinished = true;
 	}
 	
@@ -162,6 +164,7 @@ public class ProtocolState {
 	public void resetStoredCount() {
 		
 		this.respondedID = new HashSet<Integer>();
+		this.attempts = 0;
 		this.isStoredCountCorrect = false;
 	}
 
@@ -218,7 +221,7 @@ public class ProtocolState {
 	/**
 	 * @return the current chunk number being processed
 	 */
-	public long getCurrentChunkNo() {
+	public synchronized long getCurrentChunkNo() {
 		return currentChunkNo;
 	}
 
@@ -281,7 +284,7 @@ public class ProtocolState {
 	/**
 	 * @return the hash set of unique Peer IDs that have responded to a message
 	 */
-	public HashSet<Integer> getRespondedID() {
+	public synchronized HashSet<Integer> getRespondedID() {
 		return respondedID;
 	}
 
@@ -302,14 +305,14 @@ public class ProtocolState {
 	/**
 	 * @return whether the number of STORED responses is enough for the desired replication degree
 	 */
-	public boolean isStoredCountCorrect() {
+	public synchronized boolean isStoredCountCorrect() {
 		return isStoredCountCorrect;
 	}
 
 	/**
 	 * @return whether the protocol instance has terminated
 	 */
-	public boolean isFinished() {
+	public synchronized boolean isFinished() {
 		return isFinished;
 	}
 	

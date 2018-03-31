@@ -124,7 +124,7 @@ public class ServiceMessage {
 	 * @param packet the packet storing the header
 	 * @return whether the header is a valid service message
 	 */
-	public boolean findHeaderIndices(DatagramPacket packet) {
+	private boolean findHeaderIndices(DatagramPacket packet) {
 
 		byte[] data = packet.getData();
 		String msg = new String(data);
@@ -153,6 +153,8 @@ public class ServiceMessage {
 	 */
 	public String[] stripHeader(DatagramPacket packet) {
 
+		if(!findHeaderIndices(packet)) return null;
+		
 		byte[] data = packet.getData();
 		String msg = new String(data);
 		

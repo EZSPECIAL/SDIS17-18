@@ -2,9 +2,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.net.SocketTimeoutException;
 
-public class ServiceChannel {
+public class ServiceChannel implements Runnable {
 
 	// Multicast socket settings
 	private InetAddress addr;
@@ -42,30 +41,20 @@ public class ServiceChannel {
 	/**
 	 * Wait for a packet on the UDP socket and returns it.
 	 * 
-	 * @param timeout the timeout to receive in milliseconds
 	 * @return the packet received
 	 */
-	public DatagramPacket listen(int timeout) throws IOException {
+	public DatagramPacket listen() throws IOException {
 		
 		byte[] binData = new byte[packetSize];
 		DatagramPacket packet = new DatagramPacket(binData, binData.length);
 		
-        String msg = "receiving packets on \"" + this.channelName + "\" with " + timeout + "ms timeout";
+        String msg = "receiving packets on \"" + this.channelName + "\"";
         SystemManager.getInstance().logPrint(msg, SystemManager.LogLevel.DEBUG);
 
         socket.joinGroup(this.addr);
-		socket.setSoTimeout(timeout); // LATER use timeout on thread handler
-
-        try {
-			socket.receive(packet);
-		} catch(SocketTimeoutException e) {
-	        String err = "timed out: " + this.channelName;
-	        SystemManager.getInstance().logPrint(err, SystemManager.LogLevel.DEBUG);
-	        socket.leaveGroup(this.addr);
-	        return null;
-		}
-        
+		socket.receive(packet);
         socket.leaveGroup(this.addr);
+
 		return packet;
 	}
 
@@ -82,6 +71,28 @@ public class ServiceChannel {
         SystemManager.getInstance().logPrint(sent, SystemManager.LogLevel.DEBUG);
 
 		this.socket.send(packet);
+	}
+
+	@Override
+	public void run() {
+
+		while(true) {
+			
+			DatagramPacket packet;
+
+			try {
+				packet = this.listen();
+				Peer.getInstance().runProtocol(packet);
+			} catch (IOException e) {
+				SystemManager.getInstance().logPrint("I/O Exception on socket listening!", SystemManager.LogLevel.NORMAL);
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			} catch (InterruptedException e) {
+				SystemManager.getInstance().logPrint("Socket listening thread interrupted!", SystemManager.LogLevel.NORMAL);
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+		}
 	}
 
 }

@@ -1,4 +1,3 @@
-import java.io.IOException;
 import java.net.*;
 
 public class StartPeer {
@@ -14,7 +13,9 @@ public class StartPeer {
 	private static final int logMethodI = 7;
 	
 	/**
-	 * Starts a Peer for a distributed backup system with the specified arguments.
+	 * Starts a Peer for a distributed backup system with the specified arguments. Peer is started by
+	 * validating the command line arguments and initialising the Peer object which also initialises the
+	 * RMI thread and the channel listener threads.
 	 * 
 	 * @param args 1.  protocol version
 	 * @param args 2.  peer ID
@@ -29,19 +30,7 @@ public class StartPeer {
 
 		//System.setProperty("java.net.preferIPv4Stack", "true"); ASK needed?
 		
-		// Parses command line arguments and starts Peer which initialises RMI
 		parseArguments(args);
-		
-		try {
-			Peer.getInstance().receiveLoop();
-		} catch (IOException e) {
-
-			SystemManager.getInstance().logPrint("I/O Exception during Peer file operations!", SystemManager.LogLevel.NORMAL);
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			SystemManager.getInstance().logPrint("Thread interrupted!", SystemManager.LogLevel.NORMAL);
-			e.printStackTrace();
-		}
 	}
 	
 	/**

@@ -25,6 +25,8 @@ public class SystemManager {
 	private static LogMethod logMethod = LogMethod.CONSOLE;
 	private static final String logFolder = "logFiles";
 	private static final String logPrefix = "PeerLog_";
+	private static final String consoleLogFormat = "%-16s - %s\n";
+	private static final String fileLogFormat = "%s - %-16s - %s";
 	
 	/**
 	 * Private constructor for singleton pattern.
@@ -80,7 +82,7 @@ public class SystemManager {
 		if(logMethod.equals(LogMethod.CONSOLE) || logMethod.equals(LogMethod.BOTH)) {
 			if(logLevel.ordinal() >= desiredLogLevel.ordinal()) {
 				
-				System.out.println(message);
+				System.out.printf(consoleLogFormat, Thread.currentThread().getName(), message);
 				System.out.flush();
 			}
 		}
@@ -97,7 +99,8 @@ public class SystemManager {
 		// Get current day and time and append to log message
 		DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 		Date date = new Date();
-		String toPrint = dateFormat.format(date) + " - " + message;
+
+		String toPrint = String.format(fileLogFormat, dateFormat.format(date), Thread.currentThread().getName(), message);
 		List<String> lines = Arrays.asList(toPrint);
 		
 		// Create file only if it doesn't exist and append new lines to it

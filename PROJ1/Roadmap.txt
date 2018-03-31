@@ -2,7 +2,6 @@
 ORDER
 ---------------------
 
-    - channel threading -> unify loops
     - swap to linux
     - delete
     - restore
@@ -13,8 +12,7 @@ ORDER
     - protocol version dependent behavior (1.0 base 1.1 enh)
 
 concurrentlinkedqueue -> channels send here
-concurrenthashmap
-    
+
 ---------------------
 GRADE
 ---------------------
@@ -28,11 +26,6 @@ GRADE
 ---------------------
 THREADING
 ---------------------
-
-Version 1
-
-    - one protocol instance at a time
-    - one thread for each peer
 
 Version 2
 
@@ -94,11 +87,6 @@ Generic message
 PROTOCOLS
 ---------------------
 
-Backup
-
-    Initiator
-    - 1 sec to receive repDegree STORED else resends -> double the interval up to 5 times
-
 Restore
 
     Initiator
@@ -145,6 +133,11 @@ SETUP
 ---------------------
 CLIENT
 ---------------------
+
+    "A peer should also count the number of confirmation messages for each of the chunks it has stored and keep that
+    count in non-volatile memory. This information can be useful if the peer runs out of disk space: in that event,
+    the peer may try to free some space by evicting chunks whose actual replication degree is higher than the desired
+    replication degree."
 
     Get info ->
         For each file Peer has initiated backup of
@@ -214,12 +207,6 @@ QUESTIONS
 RMI: sometimes Enter key is needed for output to appear in Peer/Server
 
 Filesystem delete - affects service?
-
-"A peer should also count the number of confirmation messages for each of the chunks it has stored and keep that
-count in non-volatile memory. This information can be useful if the peer runs out of disk space: in that event,
-the peer may try to free some space by evicting chunks whose actual replication degree is higher than the desired
-replication degree."
-(backup enhancement invalidates this?)
 
 Offline Peer - doesn't this mean it loses all info? How can the delete enhancement work? How can "get info" work if the Peer loses info of what it initiated? What about syncing filelist between Peers?
 
