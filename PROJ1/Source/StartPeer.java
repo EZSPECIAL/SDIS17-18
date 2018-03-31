@@ -41,6 +41,9 @@ public class StartPeer {
 
 			SystemManager.getInstance().logPrint("I/O Exception during Peer file operations!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
+		} catch (InterruptedException e) {
+			SystemManager.getInstance().logPrint("Thread interrupted!", SystemManager.LogLevel.NORMAL);
+			e.printStackTrace();
 		}
 	}
 	

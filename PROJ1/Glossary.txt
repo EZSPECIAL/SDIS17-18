@@ -12,3 +12,8 @@ filepath                the file path
 
 state                   the Protocol State object relevant to this operation
 packet                  the packet to extract the header from
+
+fields                  the header fields
+packet                  the packet that originated the header fields
+
+hash                    textual representation of the hexadecimal values of a SHA256

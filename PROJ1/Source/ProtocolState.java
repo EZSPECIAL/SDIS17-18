@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -24,6 +25,10 @@ public class ProtocolState {
 	private String filepath;
 	private String filename;
 	private String hashHex;
+	
+	private int attempts;
+	private HashSet<Integer> respondedID = new HashSet<Integer>();
+	private boolean isStoredCountCorrect = false;
 	
 	private boolean isFinished;
 
@@ -72,10 +77,18 @@ public class ProtocolState {
 		this.filename = file.getName();
 		this.hashHex = computeSHA256(filepath);
 		
+		this.attempts = 0;
+		
 		return true;
 	}
 
-	// DOC
+	/**
+	 * Initialises the protocol state object for a backup response procedure by setting the required fields.
+	 * 
+	 * @param protocolVersion the backup system version
+	 * @param hash textual representation of the hexadecimal values of a SHA256
+	 * @param chunkNo the chunk number relevant to this response procedure
+	 */
 	public void initBackupResponseState(String protocolVersion, String hash, String chunkNo) {
 		
 		this.protocolVersion = protocolVersion;
@@ -132,16 +145,29 @@ public class ProtocolState {
         
         return hashHex;
 	}
+	
+	/**
+	 * Resets the hash set of unique Peer IDs that have responded to a message and its flag.
+	 */
+	public void resetStoredCount() {
+		
+		this.respondedID = new HashSet<Integer>();
+		this.isStoredCountCorrect = false;
+	}
 
 	/**
-	 * Increments current chunk number being processed by 1 and returns whether final chunk has been reached.
-	 * 
-	 * @return whether chunks are still available
+	 * Increments current chunk number being processed by 1 and sets isFinished field if last chunk
 	 */
-	public boolean incrementCurrentChunkNo() {
+	public void incrementCurrentChunkNo() {
 		this.currentChunkNo++;
-		if(this.chunkTotal == this.currentChunkNo) return false;
-		else return true;
+		if(this.chunkTotal == this.currentChunkNo) this.isFinished = true;
+	}
+	
+	/**
+	 * @param attempts increments the number of attempts for this protocol instance
+	 */
+	public void incrementAttempts() {
+		this.attempts++;
 	}
 	
 	/**
@@ -215,12 +241,40 @@ public class ProtocolState {
 	}
 
 	/**
+	 * @return the number of attempts for this protocol instance
+	 */
+	public int getAttempts() {
+		return attempts;
+	}
+	
+	/**
+	 * @return the hash set of unique Peer IDs that have responded to a message
+	 */
+	public HashSet<Integer> getRespondedID() {
+		return respondedID;
+	}
+
+	/**
+	 * @return whether the number of STORED responses is enough for the desired replication degree
+	 */
+	public boolean isStoredCountCorrect() {
+		return isStoredCountCorrect;
+	}
+
+	/**
 	 * @return whether the protocol instance has terminated
 	 */
 	public boolean isFinished() {
 		return isFinished;
 	}
-
+	
+	/**
+	 * @param whether the number of STORED responses is enough for the desired replication degree
+	 */
+	public void setStoredCountCorrect(boolean isStoredCountCorrect) {
+		this.isStoredCountCorrect = isStoredCountCorrect;
+	}
+	
 	/**
 	 * @param isFinished whether the protocol instance has terminated
 	 */

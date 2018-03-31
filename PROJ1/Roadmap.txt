@@ -2,16 +2,18 @@
 ORDER
 ---------------------
 
-    - receiveLoop block to function
-    - STORED message handling
-    - Backup initiator count STORED
-    - Backup initiator delays on resend PUTCHUNK
     - swap to linux
     - delete
     - restore
     - reclaim
+    - enh backup
+    - enh restore
+    - enh delete
     - protocol version dependent behavior (1.0 base 1.1 enh)
 
+concurrentlinkedqueue -> channels send here
+concurrenthashmap
+    
 ---------------------
 GRADE
 ---------------------
@@ -94,14 +96,7 @@ PROTOCOLS
 Backup
 
     Initiator
-    - MDB -> PUTCHUNK <Version> <SenderId> <FileId> <ChunkNo> <ReplicationDeg> <CRLF><CRLF><Body>
-    - a Peer must never store the chunks of its own files
     - 1 sec to receive repDegree STORED else resends -> double the interval up to 5 times
-    - STORED must come from different Peers
-
-    Peers
-    - MC -> STORED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
-    - random delay between 0 and 400ms
 
 Restore
 
@@ -189,6 +184,8 @@ Restore (using TCP)
     - getOutputStream() PrintWriter -> println()
     - ObjectInputStream() implements Serializable
     - ObjectOutputStream() implements Serializable
+    
+    - multiple clients
 
 Delete
 

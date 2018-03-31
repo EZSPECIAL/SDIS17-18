@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.SocketTimeoutException;
 
 public class ServiceChannel {
 
@@ -41,20 +42,30 @@ public class ServiceChannel {
 	/**
 	 * Wait for a packet on the UDP socket and returns it.
 	 * 
+	 * @param timeout the timeout to receive in milliseconds
 	 * @return the packet received
 	 */
-	public DatagramPacket listen() throws IOException {
+	public DatagramPacket listen(int timeout) throws IOException {
 		
 		byte[] binData = new byte[packetSize];
 		DatagramPacket packet = new DatagramPacket(binData, binData.length);
 		
-        String msg = "receiving packets on " + this.channelName;
+        String msg = "receiving packets on \"" + this.channelName + "\" with " + timeout + "ms timeout";
         SystemManager.getInstance().logPrint(msg, SystemManager.LogLevel.DEBUG);
 
         socket.joinGroup(this.addr);
-        socket.receive(packet);
+		socket.setSoTimeout(timeout); // LATER use timeout on thread handler
+
+        try {
+			socket.receive(packet);
+		} catch(SocketTimeoutException e) {
+	        String err = "timed out: " + this.channelName;
+	        SystemManager.getInstance().logPrint(err, SystemManager.LogLevel.DEBUG);
+	        socket.leaveGroup(this.addr);
+	        return null;
+		}
+        
         socket.leaveGroup(this.addr);
-		
 		return packet;
 	}
 

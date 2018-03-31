@@ -12,8 +12,11 @@ public class ServiceMessage {
 	private static final int dataSize = 64000;
 	private static final int expectedVersionLen = 3;
 	private static final int expectedHashLen = 64;
+	
 	private static final int minimumMsgLen = 2;
 	private static final int backupMinMsgLen = 6;
+	private static final int storedMinMsgLen = 5;
+	
 	private static final int maxChunkNo = 1000000;
 	private static final int minRepDeg = 1;
 	private static final int maxRepDeg = 9;
@@ -59,9 +62,14 @@ public class ServiceMessage {
 		if(nRead <= 0) return header.getBytes();
 		else return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
 	}
-	
-	// DOC
-	// STORED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+
+	/**
+	 * Returns a service message with the following format: "STORED &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt; &lt;ChunkNo&gt;".
+	 * 
+	 * @param peerID the numeric identifier of the sending Peer
+	 * @param state the Protocol State object relevant to this operation
+	 * @return the binary data representing the message
+	 */
 	public byte[] createStoredMsg(int peerID, ProtocolState state) {
 		
 		String header = "STORED " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
@@ -185,6 +193,13 @@ public class ServiceMessage {
 			if(!validatePutchunk(fields)) return false;
 			return true;
 			
+		// BACKUP protocol response messages
+		case "STORED":
+			
+			if(!validateHeaderSize(fields.length, storedMinMsgLen, "STORED")) return false;
+			if(!validateStored(fields)) return false;
+			return true;
+			
 		// Unknown protocols
 		default:
 			SystemManager.getInstance().logPrint("unrecognized protocol, ignoring message...", SystemManager.LogLevel.DEBUG);
@@ -202,6 +217,20 @@ public class ServiceMessage {
 		
 		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI])
 				&& validateHash(fields[hashI]) && validateChunkNo(fields[backChunkNoI]) && validateRepDeg(fields[backRepDegI]);
+		
+		return validate;
+	}
+	
+	/**
+	 * Validates a STORED message and returns whether it's valid.
+	 * 
+	 * @param fields the header fields
+	 * @return whether the STORED message is valid
+	 */
+	private boolean validateStored(String[] fields) {
+		
+		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI])
+				&& validateHash(fields[hashI]) && validateChunkNo(fields[backChunkNoI]);
 		
 		return validate;
 	}
@@ -348,7 +377,7 @@ public class ServiceMessage {
 		int bodyOffset = this.headerEndI + headerTerminationSize;
 		byte[] data = packet.getData();
 		
-		String bodySizeMsg = "body size: " + bodySize;
+		String bodySizeMsg = "packet length: " + packet.getLength() + "  body size: " + bodySize;
 		SystemManager.getInstance().logPrint(bodySizeMsg, SystemManager.LogLevel.VERBOSE);
 		
 		// Copy body data to byte array byte setting offset to header end

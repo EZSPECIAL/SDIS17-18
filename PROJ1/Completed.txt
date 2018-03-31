@@ -36,3 +36,19 @@ MULTICAST CHANNELS
     - mdb (data backup)
     - mdr (data restore)
     - created with IP:port pair through command line arguments
+
+---------------------
+PROTOCOLS
+---------------------
+
+Backup
+
+    Initiator
+    - MDB -> PUTCHUNK <Version> <SenderId> <FileId> <ChunkNo> <ReplicationDeg> <CRLF><CRLF><Body>
+    - a Peer must never store the chunks of its own files
+    -
+    - STORED must come from different Peers
+
+    Peers
+    - MC -> STORED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+    - random delay between 0 and 400ms
