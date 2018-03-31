@@ -2,6 +2,7 @@
 ORDER
 ---------------------
 
+    - channel threading -> unify loops
     - swap to linux
     - delete
     - restore

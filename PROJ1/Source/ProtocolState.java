@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.IOException;
+import java.net.DatagramPacket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +19,13 @@ public class ProtocolState {
 	private static final int maxChunkTotal = 1000001;
 	
 	private ProtocolType protocolType;
+	private ServiceMessage parser;
+	
+	// Last message fields and packet
+	String[] fields;
+	DatagramPacket packet;
+	
+	// Fields used for building ServiceMessage instances for sending
 	private long chunkTotal;
 	private long currentChunkNo;
 	private int desiredRepDeg;
@@ -35,7 +43,8 @@ public class ProtocolState {
 	/**
 	 * Default constructor used for populating Protocol State fields to avoid checking for null.
 	 */
-	public ProtocolState() {
+	public ProtocolState(ServiceMessage parser) {
+		this.parser = parser;
 		this.isFinished = true;
 	}
 	
@@ -46,8 +55,9 @@ public class ProtocolState {
 	 * 
 	 * @param protocolType the protocol type
 	 */
-	public ProtocolState(ProtocolType protocolType) {
+	public ProtocolState(ProtocolType protocolType, ServiceMessage parser) {
 		this.protocolType = protocolType;
+		this.parser = parser;
 		this.isFinished = false;
 	}
 
@@ -178,6 +188,27 @@ public class ProtocolState {
 	}
 
 	/**
+	 * @return the ServiceMessage instance responsible for creating and parsing service messages
+	 */
+	public ServiceMessage getParser() {
+		return parser;
+	}
+
+	/**
+	 * @return service message header fields
+	 */
+	public String[] getFields() {
+		return fields;
+	}
+
+	/**
+	 * @return the packet
+	 */
+	public DatagramPacket getPacket() {
+		return packet;
+	}
+
+	/**
 	 * @return the total number of chunks
 	 */
 	public long getChunkTotal() {
@@ -254,6 +285,20 @@ public class ProtocolState {
 		return respondedID;
 	}
 
+	/**
+	 * @param service message header fields to set
+	 */
+	public void setFields(String[] fields) {
+		this.fields = fields;
+	}
+	
+	/**
+	 * @param the packet to set
+	 */
+	public void setPacket(DatagramPacket packet) {
+		this.packet = packet;
+	}
+	
 	/**
 	 * @return whether the number of STORED responses is enough for the desired replication degree
 	 */

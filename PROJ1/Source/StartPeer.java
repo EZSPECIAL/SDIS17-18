@@ -13,9 +13,6 @@ public class StartPeer {
 	private static final int logLevelI = 6;
 	private static final int logMethodI = 7;
 	
-	// ASK move?
-	private static Peer peer;
-	
 	/**
 	 * Starts a Peer for a distributed backup system with the specified arguments.
 	 * 
@@ -32,11 +29,11 @@ public class StartPeer {
 
 		//System.setProperty("java.net.preferIPv4Stack", "true"); ASK needed?
 		
+		// Parses command line arguments and starts Peer which initialises RMI
 		parseArguments(args);
-		peer.initRMI();
 		
 		try {
-			peer.receiveLoop();
+			Peer.getInstance().receiveLoop();
 		} catch (IOException e) {
 
 			SystemManager.getInstance().logPrint("I/O Exception during Peer file operations!", SystemManager.LogLevel.NORMAL);
@@ -96,7 +93,7 @@ public class StartPeer {
 		}
 		
 		SystemManager.getInstance().setPeerID(peerID);
-		peer = new Peer(args[versionI], peerID, args[accessPointI], mccAddr, mccPort, mdbAddr, mdbPort, mdrAddr, mdrPort);
+		Peer.getInstance().initPeer(args[versionI], peerID, args[accessPointI], mccAddr, mccPort, mdbAddr, mdbPort, mdrAddr, mdrPort);
 	}
 	
 	/**

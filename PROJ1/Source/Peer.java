@@ -43,10 +43,24 @@ public class Peer implements RMITesting {
 	private ServiceChannel mdb;
 	private ServiceChannel mdr;
 	
-	private ProtocolState currProtocol = new ProtocolState(); // ASK concurrent hash map?
+	private ProtocolState rcvProtocol = new ProtocolState(new ServiceMessage()); // ASK concurrent hash map?
+	private ProtocolState initProtocol = new ProtocolState(new ServiceMessage());
+	private static Peer singleton = new Peer();
 	
 	/**
-	 * A Peer object handles protocol initiation and also requests for protocol handling from other initiators on known UDP multicast channels.
+	 * Private constructor for singleton pattern.
+	 */
+	private Peer() {}
+	
+	/**
+	 * @return the singleton instance of the class
+	 */
+	public static Peer getInstance( ) {
+		return singleton;
+	}
+	
+	/**
+	 * Initialises singleton Peer object. A Peer object handles protocol initiation and also requests for protocol handling from other initiators on known UDP multicast channels.
 	 * Peers have the function of managing a file backup service and store information about their own database and what they believe the system currently has stored.
 	 * 
 	 * @param protocolVersion the backup system version
@@ -59,7 +73,7 @@ public class Peer implements RMITesting {
 	 * @param mdrAddr address of the multicast data restore channel
 	 * @param mdrPort port for the multicast data restore channel
 	 */
-	public Peer(String protocolVersion, int peerID, String accessPoint, InetAddress mccAddr, int mccPort, InetAddress mdbAddr, int mdbPort, InetAddress mdrAddr, int mdrPort) {
+	public void initPeer(String protocolVersion, int peerID, String accessPoint, InetAddress mccAddr, int mccPort, InetAddress mdbAddr, int mdbPort, InetAddress mdrAddr, int mdrPort) {
 		
 		this.protocolVersion = protocolVersion;
 		this.peerID = peerID;
@@ -68,6 +82,8 @@ public class Peer implements RMITesting {
 		this.mcc = new ServiceChannel(mccAddr, mccPort, "mcc");
 		this.mdb = new ServiceChannel(mdbAddr, mdbPort, "mdb");
 		this.mdr = new ServiceChannel(mdrAddr, mdrPort, "mdr");
+		
+		this.initRMI();
 	}
 	
 	/**
@@ -97,12 +113,14 @@ public class Peer implements RMITesting {
 		
 		while(true) {
 
-			ServiceMessage parser = new ServiceMessage();
-			DatagramPacket packet = receivePacket(this.mdb, 0);
-			if(packet == null) continue;
-			String[] headerFields = parseHeader(packet, parser);
-			if(headerFields == null) continue;
-			this.runProtocol(headerFields, packet, parser);
+			this.rcvProtocol = new ProtocolState(new ServiceMessage());
+			
+			this.rcvProtocol.setPacket(receivePacket(this.mdb, 0));
+			if(this.rcvProtocol.getPacket() == null) continue;
+			this.rcvProtocol.setFields(parseHeader(this.rcvProtocol));
+			if(this.rcvProtocol.getFields() == null) continue;
+			
+			this.runProtocol(this.rcvProtocol);
 		}
 	}
 	
@@ -125,10 +143,10 @@ public class Peer implements RMITesting {
 	 * @param packet the packet to extract the header from
 	 * @return the header fields, or null if invalid
 	 */
-	private String[] parseHeader(DatagramPacket packet, ServiceMessage parser) {
+	private String[] parseHeader(ProtocolState state) {
 		
-		if(!parser.findHeaderIndices(packet)) return null;
-		String[] header = parser.stripHeader(packet);
+		if(!state.getParser().findHeaderIndices(state.getPacket())) return null;
+		String[] header = state.getParser().stripHeader(state.getPacket());
 		if(header == null) return null;
 		
 		return header;
@@ -140,9 +158,9 @@ public class Peer implements RMITesting {
 	 * @param fields the header fields
 	 * @param packet the packet that originated the header fields
 	 */
-	private void runProtocol(String[] fields, DatagramPacket packet, ServiceMessage parser) throws IOException, InterruptedException {
+	private void runProtocol(ProtocolState state) throws IOException, InterruptedException {
 		
-		String protocol = fields[protocolI].toUpperCase();
+		String protocol = state.getFields()[protocolI].toUpperCase();
 		
 		// Run handler for each known protocol type
 		switch(protocol) {
@@ -150,13 +168,13 @@ public class Peer implements RMITesting {
 		// BACKUP protocol initiated
 		case "PUTCHUNK":
 
-			handleBackup(fields, packet, parser);
+			this.handleBackup(state);
 			break;
 			
 		// BACKUP response
 		case "STORED":
 			
-			handleStored(fields);
+			this.handleStored(state);
 			break;
 		}
 	}
@@ -168,12 +186,12 @@ public class Peer implements RMITesting {
 	 * @param fields the header fields
 	 * @param packet the packet that originated the header fields
 	 */
-	private void handleBackup(String[] fields, DatagramPacket packet, ServiceMessage parser) throws IOException, InterruptedException {
+	private void handleBackup(ProtocolState state) throws IOException, InterruptedException {
 
-		byte[] bodyData = parser.stripBody(packet);
+		byte[] bodyData = state.getParser().stripBody(state.getPacket());
 		
 	    // Check if this Peer is the Peer that requested the backup
-	    if(Integer.parseInt(fields[senderI]) == this.peerID) {
+	    if(Integer.parseInt(state.getFields()[senderI]) == this.peerID) {
 	    	SystemManager.getInstance().logPrint("own chunk so won't store", SystemManager.LogLevel.DEBUG);
 	    	return;
 	    }
@@ -182,8 +200,8 @@ public class Peer implements RMITesting {
 	    
 	    // Create file structure for this chunk
 		String peerFolder = "./" + peerFolderPrefix + this.peerID + peerFolderSuffix;
-	    String chunkFolder = peerFolder + "/" + fields[hashI];
-	    String chunkPath = chunkFolder + "/" + fields[backChunkNoI];
+	    String chunkFolder = peerFolder + "/" + state.getFields()[hashI];
+	    String chunkPath = chunkFolder + "/" + state.getFields()[backChunkNoI];
 	    this.createDirIfNotExists(peerFolder);
 	    this.createDirIfNotExists(chunkFolder);
 	    
@@ -195,19 +213,18 @@ public class Peer implements RMITesting {
 	    	output.write(bodyData);
 	    	output.close();
 	    	
-			SystemManager.getInstance().logPrint("written: " + fields[hashI] + "." + fields[backChunkNoI], SystemManager.LogLevel.NORMAL);
+			SystemManager.getInstance().logPrint("written: " + state.getFields()[hashI] + "." + state.getFields()[backChunkNoI], SystemManager.LogLevel.NORMAL);
 	    } else SystemManager.getInstance().logPrint("chunk already stored", SystemManager.LogLevel.DEBUG);
 	    
 	    // Prepare the necessary fields for the response message
-	    ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.BACKUP);
-	    state.initBackupResponseState(this.protocolVersion, fields[hashI], fields[backChunkNoI]);
+	    state.initBackupResponseState(this.protocolVersion, state.getFields()[hashI], state.getFields()[backChunkNoI]);
 	    
 	    // Wait a random millisecond delay from a previously specified range and then send the message
 	    int waitTimeMS = ThreadLocalRandom.current().nextInt(minResponseWaitMS, maxResponseWaitMS + 1);
 	    SystemManager.getInstance().logPrint("waiting " + waitTimeMS + "ms", SystemManager.LogLevel.DEBUG);
 	    Thread.sleep(waitTimeMS); // LATER use timeout on thread handler
 	    
-	    byte[] msg = parser.createStoredMsg(this.peerID, state);
+	    byte[] msg = state.getParser().createStoredMsg(this.peerID, state);
 	    this.mcc.send(msg);
 	}
 	
@@ -217,20 +234,20 @@ public class Peer implements RMITesting {
 	 * 
 	 * @param fields the header fields
 	 */
-	private void handleStored(String[] fields) {
+	private void handleStored(ProtocolState state) {
 		
-		if(this.currProtocol.getRespondedID().add(Integer.parseInt(fields[senderI])))
-			SystemManager.getInstance().logPrint("added peer ID \"" + fields[senderI] + "\" to responded", SystemManager.LogLevel.DEBUG);
+		if(state.getRespondedID().add(Integer.parseInt(state.getFields()[senderI])))
+			SystemManager.getInstance().logPrint("added peer ID \"" + state.getFields()[senderI] + "\" to responded", SystemManager.LogLevel.DEBUG);
 		
-		int responseCount = this.currProtocol.getRespondedID().size();
-		int desiredCount = this.currProtocol.getDesiredRepDeg();
+		int responseCount = state.getRespondedID().size();
+		int desiredCount = state.getDesiredRepDeg();
 		
 		String respondedMsg = responseCount + " / " + desiredCount + " unique peers have responded";
 		SystemManager.getInstance().logPrint(respondedMsg, SystemManager.LogLevel.DEBUG);
 
 		if(responseCount >= desiredCount) {
-			this.currProtocol.incrementCurrentChunkNo();
-			this.currProtocol.setStoredCountCorrect(true);
+			state.incrementCurrentChunkNo();
+			state.setStoredCountCorrect(true);
 		}
 	}
 
@@ -254,61 +271,67 @@ public class Peer implements RMITesting {
 		SystemManager.getInstance().logPrint("started " + backMsg, SystemManager.LogLevel.NORMAL);
 		
 		// Initialise protocol state for backing up the file
-		this.currProtocol = new ProtocolState(ProtocolState.ProtocolType.INIT_BACKUP);
-		if(!this.currProtocol.initBackupState(this.protocolVersion, filepath, repDeg)) {
+		this.initProtocol = new ProtocolState(ProtocolState.ProtocolType.INIT_BACKUP, new ServiceMessage());
+		if(!this.initProtocol.initBackupState(this.protocolVersion, filepath, repDeg)) {
 			String backFileSize = "cannot backup files larger than 64GB!";
 			SystemManager.getInstance().logPrint(backFileSize, SystemManager.LogLevel.NORMAL);
 			return;
 		}
 
-		while(this.currProtocol.getAttempts() < maxAttempts) {
+		// Send PUTCHUNK and wait for repDeg STORED responses
+		while(this.initProtocol.getAttempts() < maxAttempts) {
 		
 			// Prepare and send next PUTCHUNK message
-			ServiceMessage parser = new ServiceMessage();
-			byte[] msg = parser.createPutchunkMsg(this.peerID, this.currProtocol);
+			byte[] msg = this.initProtocol.getParser().createPutchunkMsg(this.peerID, this.initProtocol);
 			this.mdb.send(msg);
 
 			// Wait for desired replication degree number of STORED messages up to a timeout value
-			if(!this.storedLoop(parser)) continue;
+			if(!this.storedLoop(this.initProtocol)) continue;
 			
-			if(this.currProtocol.isFinished()) break;
+			if(this.initProtocol.isFinished()) break;
 		}
 		
 		// LATER add to local database
 		
 		// Finish protocol instance
-		if(this.currProtocol.isFinished()) SystemManager.getInstance().logPrint("finished " + backMsg, SystemManager.LogLevel.NORMAL);
+		if(this.initProtocol.isFinished()) SystemManager.getInstance().logPrint("finished " + backMsg, SystemManager.LogLevel.NORMAL);
 		else {
-			this.currProtocol.setFinished(true);
+			this.initProtocol.setFinished(true);
 			SystemManager.getInstance().logPrint("failed " + backMsg, SystemManager.LogLevel.NORMAL);
 		}
 	}
 	
 	// DOC
-	private boolean storedLoop(ServiceMessage parser) throws IOException, InterruptedException {
+	private boolean storedLoop(ProtocolState state) throws IOException, InterruptedException {
 		
 		while(true) {
 			
 			// Wait for packets and validate them as a STORED message
-			DatagramPacket packet = receivePacket(this.mcc, (int) (baseTimeoutMS * Math.pow(2, this.currProtocol.getAttempts())));
+			state.setPacket(this.receivePacket(this.mcc, (int) (baseTimeoutMS * Math.pow(2, state.getAttempts()))));
 
-			if(packet == null) {
-				this.currProtocol.incrementAttempts();
+			if(state.getPacket() == null) {
+				state.incrementAttempts();
 				return false;
 			}
 
-			String[] responseHeader = parseHeader(packet, parser);
+			state.setFields(this.parseHeader(state));
 
-			String protocol = responseHeader[protocolI].toUpperCase();
-			if(responseHeader == null || !protocol.equals("STORED")) {
-				this.currProtocol.incrementAttempts();
+			if(state.getFields() == null) {
+				state.incrementAttempts();
+				return false;
+			}
+			
+			// TODO move to run protocol for verification
+			String protocol = state.getFields()[protocolI].toUpperCase();
+			if(!protocol.equals("STORED")) {
+				state.incrementAttempts();
 				return false;
 			}
 
 			// Run STORED handler and verify STORED count
-			runProtocol(responseHeader, packet, parser);
-			if(this.currProtocol.isStoredCountCorrect()) {
-				this.currProtocol.resetStoredCount();
+			this.runProtocol(state);
+			if(state.isStoredCountCorrect()) {
+				state.resetStoredCount();
 				return true;
 			}
 		}
