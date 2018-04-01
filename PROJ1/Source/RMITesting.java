@@ -36,7 +36,7 @@ public interface RMITesting extends Remote {
 	 * @param filepath path to file to backup
 	 * @throws RemoteException
 	 */
-	void remoteDelete(String filepath) throws RemoteException;
+	void remoteDelete(String filepath) throws IOException, NoSuchAlgorithmException, InterruptedException;
 	
 	/**
 	 * Sets max disk space the Peer is allowed to use.

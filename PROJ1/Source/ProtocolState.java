@@ -107,6 +107,26 @@ public class ProtocolState {
 		this.hashHex = hash;
 		this.currentChunkNo = Long.parseLong(chunkNo);
 	}
+
+	/**
+	 * Initialises the protocol state object for a delete procedure, computes the SHA256 hash
+	 * of the filename and metadata.
+	 * 
+	 * @param protocolVersion the backup system version
+	 * @param filepath file path of the file to delete
+	 */
+	public void initDeleteState(String protocolVersion, String filepath) throws NoSuchAlgorithmException, IOException {
+		
+		this.protocolVersion = protocolVersion;
+		this.filepath = filepath;
+		
+		// Compute SHA256 of given filename
+		File file = new File(filepath);
+		this.filename = file.getName();
+		this.hashHex = computeSHA256(filepath);
+		
+		this.attempts = 0;
+	}
 	
 	/**
 	 * Calculates the total chunks of {@value #chunkSize} bytes needed to backup the file specified.

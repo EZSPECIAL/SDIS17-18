@@ -18,6 +18,7 @@ public class Peer implements RMITesting {
 	private static final int maxAttempts = 5;
 	private static final int minResponseWaitMS = 0;
 	private static final int maxResponseWaitMS = 400;
+	private static final int deleteWaitMS = 200;
 	
 	// Peer storage area fixed strings
 	private static final String peerFolderPrefix = "Peer_";
@@ -125,6 +126,7 @@ public class Peer implements RMITesting {
 		state.setPacket(packet);
 		state.setFields(state.getParser().stripHeader(state.getPacket()));
 		
+		// Message was not recognised, ignore
 		if(state.getFields() == null) return;
 		
 		// Run handler for each known protocol type
@@ -141,15 +143,21 @@ public class Peer implements RMITesting {
 			
 			this.handleStored(state);
 			break;
+			
+		// DELETE protocol initiated
+		case "DELETE":
+			
+			this.handleDelete(state);
+			break;
 		}
 	}
 
+	// LATER update local database
 	/**
-	 * Handles a BACKUP protocol by writing the received chunk only if it doesn't exist already and then sending
+	 * Handles BACKUP protocol by writing the received chunk only if it doesn't exist already and then sending
 	 * a response STORED message. Doesn't write the chunk if the receiver and sender are the same.
 	 * 
-	 * @param fields the header fields
-	 * @param packet the packet that originated the header fields
+	 * @param state the Protocol State object relevant to this operation
 	 */
 	private void handleBackup(ProtocolState state) throws IOException, InterruptedException {
 
@@ -161,8 +169,6 @@ public class Peer implements RMITesting {
 	    	return;
 	    }
 		
-	    // LATER add to local database
-	    
 	    // Create file structure for this chunk
 		String peerFolder = "./" + peerFolderPrefix + this.peerID + peerFolderSuffix;
 	    String chunkFolder = peerFolder + "/" + state.getFields()[hashI];
@@ -198,7 +204,7 @@ public class Peer implements RMITesting {
 	 * Handles the responses to a BACKUP protocol by counting the unique STORED responses
 	 * up to the desired replication degree for this protocol instance.
 	 * 
-	 * @param fields the header fields
+	 * @param state the Protocol State object relevant to this operation
 	 */
 	private void handleStored(ProtocolState state) {
 		
@@ -229,6 +235,37 @@ public class Peer implements RMITesting {
 		if(responseCount >= desiredCount) currState.setStoredCountCorrect(true);
 	}
 
+	// LATER update local database
+	/**
+	 * Handles DELETE protocol by deleting all the chunks referring to this protocol's instance SHA256.
+	 * 
+	 * @param state the Protocol State object relevant to this operation
+	 */
+	private void handleDelete(ProtocolState state) {
+		
+	    // Open chunk folder for this hash and verify that it exists
+		String peerFolder = "./" + peerFolderPrefix + this.peerID + peerFolderSuffix;
+	    String chunkFolder = peerFolder + "/" + state.getFields()[hashI];
+	    
+	    File folder = new File(chunkFolder);
+	    if(!folder.exists()) {
+		    SystemManager.getInstance().logPrint("don't have the file, ignoring message", SystemManager.LogLevel.DEBUG);
+	    	return;
+	    }
+
+	    // Get all chunks and delete them
+	    File[] chunks = folder.listFiles();
+	    SystemManager.getInstance().logPrint("chunks to delete: " + chunks.length, SystemManager.LogLevel.DEBUG);
+	    
+	    for(File chunk : chunks) {
+	    	chunk.delete();
+	    }
+	    
+	    // Delete chunk folder
+	    folder.delete();
+	    SystemManager.getInstance().logPrint("deleted: " + state.getFields()[hashI], SystemManager.LogLevel.NORMAL);
+	}
+	
 	/**
 	 * Creates directory specified by path if it doesn't already exist.
 	 * 
@@ -243,6 +280,7 @@ public class Peer implements RMITesting {
 	}
 
 	// LATER remove ProtocolState when finished
+	// LATER update local database
 	@Override
 	public void remoteBackup(String filepath, int repDeg) throws IOException, NoSuchAlgorithmException, InterruptedException {
 		
@@ -282,9 +320,7 @@ public class Peer implements RMITesting {
 
 			if(state.isFinished()) break;
 		}
-		
-		// LATER add to local database
-		
+
 		// Finish protocol instance
 		if(state.isFinished()) SystemManager.getInstance().logPrint("finished " + backMsg, SystemManager.LogLevel.NORMAL);
 		else {
@@ -305,16 +341,29 @@ public class Peer implements RMITesting {
 		return;
 	}
 
+	// LATER use global protocol state for enhancement
+	// LATER update local database
 	@Override
-	public void remoteDelete(String filepath) throws RemoteException {
-		
-		// TODO delete protocol
+	public void remoteDelete(String filepath) throws IOException, NoSuchAlgorithmException, InterruptedException {
+
+		Thread.currentThread().setName("RMI");
 		
 		String delMsg = "delete: " + filepath;
 		SystemManager.getInstance().logPrint("started " + delMsg, SystemManager.LogLevel.NORMAL);
+		
+		// Initialise protocol state for deleting file
+		ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.DELETE, new ServiceMessage());
+		state.initDeleteState(this.protocolVersion, filepath);
+		
+		// Create and send delete message 3 times
+		byte[] msg = state.getParser().createDeleteMsg(this.peerID, state);
+		this.mcc.send(msg);
+		Thread.sleep(deleteWaitMS);
+		this.mcc.send(msg);
+		Thread.sleep(deleteWaitMS);
+		this.mcc.send(msg);
+		
 		SystemManager.getInstance().logPrint("finished " + delMsg, SystemManager.LogLevel.NORMAL);
-
-		return;
 	}
 
 	@Override

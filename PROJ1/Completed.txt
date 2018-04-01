@@ -29,6 +29,26 @@ PEER
     - has a local folder that serves as their virtual HDD
 
 ---------------------
+SERVICE MESSAGE
+---------------------
+
+    - header / body (data)
+    - 1+ space between fields
+    - 0+ spaces on last field
+    - header termination <CRLF><CRLF>
+    - new/modified messages can have more header fields, ignore them in parser
+    - drop any unrecognized message
+
+    - message type (protocol)
+    - version ("1.0")
+    - senderID (peer id)
+    - fileID (sha256 with last modified metadata, encoded as HEX to ASCII)
+    - chunkNo (start at 0, up to 6 digits)
+    - repDegree (1 to 9, store N copies in system)
+
+    - body (file divided in 64K chunks identified by (fileID, chunkNo), last chunk has 0 to 63999 size)
+    
+---------------------
 MULTICAST CHANNELS
 ---------------------
 
@@ -53,6 +73,13 @@ Backup
     - MC -> STORED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
     - random delay between 0 and 400ms
 
+Delete
+
+    Initiator
+    - MC -> DELETE <Version> <SenderId> <FileId> <CRLF><CRLF>
+    - all peers delete their chunks of the file
+    - send N times to ensure reception of message
+
 ---------------------
 THREADING
 ---------------------
@@ -61,3 +88,11 @@ Version 1
 
     - one protocol instance at a time
     - one thread for each peer
+
+Version 2
+
+    - one protocol instance at a time
+    - one thread per channel (control, backup, restore)
+    - msg thread is endless loop of receive -> process
+    - multicaster thread (thread.sleep() for timeout), created for TestApp, terminated on protocol finish
+    - TestApp RMI creates multicaster thread to handle protocol invoked

@@ -149,8 +149,14 @@ public class TestApp {
 		
 		try {
 			remoteObj.remoteDelete(filepath);
-		} catch(RemoteException e) {
-			System.out.println("TestApp: exception executing remote delete " + e.toString());
+		} catch(IOException e) {
+			System.out.println("TestApp: IO exception executing remote delete " + e.toString());
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			System.out.println("TestApp: no such algorithm exception executing remote delete " + e.toString());
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			System.out.println("TestApp: interrupted thread exception executing remote delete " + e.toString());
 			e.printStackTrace();
 		}
 	}

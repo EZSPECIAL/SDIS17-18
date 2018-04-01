@@ -16,6 +16,7 @@ public class ServiceMessage {
 	private static final int minimumMsgLen = 2;
 	private static final int backupMinMsgLen = 6;
 	private static final int storedMinMsgLen = 5;
+	private static final int deleteMinMsgLen = 4;
 	
 	private static final int maxChunkNo = 1000000;
 	private static final int minRepDeg = 1;
@@ -75,8 +76,22 @@ public class ServiceMessage {
 		String header = "STORED " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
 		
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
-        
         return header.getBytes();
+	}
+	
+	/**
+	 * Returns a service message with the following format: "DELETE &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt;".
+	 * 
+	 * @param peerID the numeric identifier of the sending Peer
+	 * @param state the Protocol State object relevant to this operation
+	 * @return the binary data representing the message
+	 */
+	public byte[] createDeleteMsg(int peerID, ProtocolState state) {
+		
+		String header = "DELETE " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + headerTermination;
+		
+        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
+		return header.getBytes();
 	}
 	
 	/**
@@ -164,7 +179,7 @@ public class ServiceMessage {
 		
 		// TODO validate every protocol header
 		// Divide by fields and validate header
-		String[] headerFields = header.split("[ ]");
+		String[] headerFields = header.split("[ ]+");
 
 		if(headerFields.length < minimumMsgLen) {
 			SystemManager.getInstance().logPrint("invalid header, ignoring message...", SystemManager.LogLevel.DEBUG); 
@@ -202,6 +217,13 @@ public class ServiceMessage {
 			if(!validateStored(fields)) return false;
 			return true;
 			
+		// DELETE protocol initiator message
+		case "DELETE":
+			
+			if(!validateHeaderSize(fields.length, deleteMinMsgLen, "DELETE")) return false;
+			if(!validateDelete(fields)) return false;
+			return true;
+			
 		// Unknown protocols
 		default:
 			SystemManager.getInstance().logPrint("unrecognized protocol, ignoring message...", SystemManager.LogLevel.DEBUG);
@@ -233,6 +255,20 @@ public class ServiceMessage {
 		
 		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI])
 				&& validateHash(fields[hashI]) && validateChunkNo(fields[backChunkNoI]);
+		
+		return validate;
+	}
+	
+	/**
+	 * Validates a DELETE message and returns whether it's valid.
+	 * 
+	 * @param fields the header fields
+	 * @return whether the DELETE message is valid
+	 */
+	private boolean validateDelete(String[] fields) {
+		
+		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI])
+				&& validateHash(fields[hashI]);
 		
 		return validate;
 	}

@@ -2,9 +2,8 @@
 ORDER
 ---------------------
 
-    - swap to linux
-    - delete
     - restore
+    - swap to linux
     - reclaim
     - enh backup
     - enh restore
@@ -27,16 +26,6 @@ GRADE
 THREADING
 ---------------------
 
-Version 2
-
-    - one protocol instance at a time
-    - one thread per channel (control, backup, restore)
-    - msg thread is endless loop of receive -> process
-    - multicaster thread (thread.sleep() for timeout), created for TestApp, terminated on protocol finish
-    - TestApp RMI creates multicaster thread to handle protocol invoked
-    - multicaster and control channel thread need to share received STORED, use locks
-    - non-initiator peers don't need to handle STORED but could since the code is already there
-
 Version 3
 
     - multiple multicaster instances on any Peer, handle 1 protocol (send N messages with sliding window)
@@ -58,30 +47,16 @@ Version 6
     - I/O concurrency with java.nio.channels.AsynchronousFileChannel
 
 ---------------------
-GENERAL
+DATABASE & DISK
 ---------------------
 
-Peers
-
-    - have a max disk space and keep count of chunk disk space usage (start with 8MB)
-
-Generic message
-
-    - header / body (data)
-    - 1+ space between fields
-    - 0+ spaces on last field
-    - header termination <CRLF><CRLF>
-    - new/modified messages can have more header fields, ignore them in parser
-    - drop any unrecognized message
-
-    - message type (protocol)
-    - version ("1.0")
-    - senderID (peer id)
-    - fileID (sha256 with last modified metadata, encoded as HEX to ASCII)
-    - chunkNo (start at 0, up to 6 digits)
-    - repDegree (1 to 9, store N copies in system)
-
-    - body (file divided in 64K chunks identified by (fileID, chunkNo), last chunk has 0 to 63999 size)
+    - max disk space and keep count of chunk disk space usage (start with 8MB)
+    - local database of everything in the system
+    - "STATE" protocol
+    - "A peer should also count the number of confirmation messages for each of the chunks it has stored and keep that
+    count in non-volatile memory. This information can be useful if the peer runs out of disk space: in that event,
+    the peer may try to free some space by evicting chunks whose actual replication degree is higher than the desired
+    replication degree."
 
 ---------------------
 PROTOCOLS
@@ -101,13 +76,6 @@ Restore
 between 0 and 400 ms, before sending the CHUNK message. If it receives a CHUNK message before that time expires,
 it will not send the CHUNK message."
 
-Delete
-
-    Initiator
-    - MC -> DELETE <Version> <SenderId> <FileId> <CRLF><CRLF>
-    - all peers delete their chunks of the file
-    - send N times to ensure reception of message
-
 Reclaim
 
     Initiator
@@ -117,27 +85,24 @@ Reclaim
     - If during 0 to 400ms delay a PUTCHUNK for the same chunk is received, abort
 
 ---------------------
-REPORT
+DELIVERY & DEMO
 ---------------------
 
+Redmine
+    - deliver on redmine with requested instructions
+
+Report
     - 1 page per enhancement (backup, restore, delete)
     - 2-3 pages for concurrency model
 
----------------------
-SETUP
----------------------
-
+Setup
     - scripts for quick testing
+    - put pdf/png images on repository for testing during demo
     - test PCs in lab, local and remote
 
 ---------------------
 CLIENT
 ---------------------
-
-    "A peer should also count the number of confirmation messages for each of the chunks it has stored and keep that
-    count in non-volatile memory. This information can be useful if the peer runs out of disk space: in that event,
-    the peer may try to free some space by evicting chunks whose actual replication degree is higher than the desired
-    replication degree."
 
     Get info ->
         For each file Peer has initiated backup of
