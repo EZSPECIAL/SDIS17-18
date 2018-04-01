@@ -28,7 +28,7 @@ public interface RMITesting extends Remote {
 	 * @param filepath path to file to backup
 	 * @throws RemoteException
 	 */
-	void remoteRestore(String filepath) throws RemoteException;
+	void remoteRestore(String filepath) throws IOException, NoSuchAlgorithmException, InterruptedException;
 	
 	/**
 	 * Triggers the delete protocol with the invoking Peer as Initiator Peer.

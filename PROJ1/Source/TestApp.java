@@ -99,8 +99,6 @@ public class TestApp {
 			cmdErr("unrecognized protocol \"" + args[protocolI] + "\"!", "all");
 			break;
 		}
-		
-		System.out.flush(); // ASK working?
 	}
 
 	/**
@@ -135,7 +133,14 @@ public class TestApp {
 		try {
 			remoteObj.remoteRestore(filepath);
 		} catch(RemoteException e) {
-			System.out.println("TestApp: exception executing remote restore " + e.toString());
+		} catch(IOException e) {
+			System.out.println("TestApp: IO exception executing remote restore " + e.toString());
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			System.out.println("TestApp: no such algorithm exception executing remote restore " + e.toString());
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			System.out.println("TestApp: interrupted thread exception executing remote restore " + e.toString());
 			e.printStackTrace();
 		}
 	}

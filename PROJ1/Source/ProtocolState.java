@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -34,9 +35,11 @@ public class ProtocolState {
 	private String filename;
 	private String hashHex;
 	
+	// Fields used for protocol logic
 	private int attempts;
 	private HashSet<Integer> respondedID = new HashSet<Integer>();
 	private boolean isStoredCountCorrect = false;
+	private ConcurrentHashMap<Long, byte[]> restoredChunks = new ConcurrentHashMap<Long, byte[]>(8, 0.9f, 1);
 	
 	private boolean isFinished;
 
@@ -126,6 +129,49 @@ public class ProtocolState {
 		this.hashHex = computeSHA256(filepath);
 		
 		this.attempts = 0;
+	}
+	
+	/**
+	 * Initialises the protocol state object for a restore procedure, calculates the total number of chunks of the file and the SHA256 hash
+	 * of the filename and metadata. Returns whether initialisation was successful.
+	 * 
+	 * @param protocolVersion the backup system version
+	 * @param filepath file path of the file to backup
+	 */
+	public boolean initRestoreState(String protocolVersion, String filepath) throws NoSuchAlgorithmException, IOException {
+		
+		this.protocolVersion = protocolVersion;
+		this.filepath = filepath;
+		
+		// Get total number of chunks
+		this.chunkTotal = this.getTotalChunks(filepath);
+		if(this.chunkTotal > maxChunkTotal) return false;
+		this.currentChunkNo = 0;
+		
+		// Compute SHA256 of given filename
+		File file = new File(filepath);
+		this.filename = file.getName();
+		this.hashHex = computeSHA256(filepath);
+		
+		this.attempts = 0;
+		
+		return true;
+	}
+	
+	/**
+	 * Initialises the protocol state object for a restore response procedure by setting the required fields.
+	 * 
+	 * @param protocolVersion the backup system version
+	 * @param hash textual representation of the hexadecimal values of a SHA256
+	 * @param filepath file path of the file to backup
+	 * @param chunkNo the chunk number relevant to this response procedure
+	 */
+	public void initRestoreResponseState(String protocolVersion, String hash, String filepath, String chunkNo) {
+		
+		this.protocolVersion = protocolVersion;
+		this.filepath = filepath;
+		this.hashHex = hash;
+		this.currentChunkNo = Long.parseLong(chunkNo);
 	}
 	
 	/**
@@ -241,7 +287,7 @@ public class ProtocolState {
 	/**
 	 * @return the current chunk number being processed
 	 */
-	public synchronized long getCurrentChunkNo() {
+	public long getCurrentChunkNo() {
 		return currentChunkNo;
 	}
 
@@ -304,7 +350,7 @@ public class ProtocolState {
 	/**
 	 * @return the hash set of unique Peer IDs that have responded to a message
 	 */
-	public synchronized HashSet<Integer> getRespondedID() {
+	public HashSet<Integer> getRespondedID() {
 		return respondedID;
 	}
 
@@ -325,14 +371,21 @@ public class ProtocolState {
 	/**
 	 * @return whether the number of STORED responses is enough for the desired replication degree
 	 */
-	public synchronized boolean isStoredCountCorrect() {
+	public boolean isStoredCountCorrect() {
 		return isStoredCountCorrect;
+	}
+
+	/**
+	 * @return the hash map of currently stored chunks
+	 */
+	public ConcurrentHashMap<Long, byte[]> getRestoredChunks() {
+		return restoredChunks;
 	}
 
 	/**
 	 * @return whether the protocol instance has terminated
 	 */
-	public synchronized boolean isFinished() {
+	public boolean isFinished() {
 		return isFinished;
 	}
 	
@@ -341,6 +394,13 @@ public class ProtocolState {
 	 */
 	public void setStoredCountCorrect(boolean isStoredCountCorrect) {
 		this.isStoredCountCorrect = isStoredCountCorrect;
+	}
+	
+	/**
+	 * @param the hash map of currently stored chunks
+	 */
+	public void setRestoredChunks(ConcurrentHashMap<Long, byte[]> restoredChunks) {
+		this.restoredChunks = restoredChunks;
 	}
 	
 	/**

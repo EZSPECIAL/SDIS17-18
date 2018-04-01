@@ -14,9 +14,11 @@ public class ServiceMessage {
 	private static final int expectedHashLen = 64;
 	
 	private static final int minimumMsgLen = 2;
-	private static final int backupMinMsgLen = 6;
+	private static final int putchunkMinMsgLen = 6;
 	private static final int storedMinMsgLen = 5;
 	private static final int deleteMinMsgLen = 4;
+	private static final int getchunkMinMsgLen = 5;
+	private static final int chunkMinMsgLen = 5;
 	
 	private static final int maxChunkNo = 1000000;
 	private static final int minRepDeg = 1;
@@ -92,6 +94,45 @@ public class ServiceMessage {
 		
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
 		return header.getBytes();
+	}
+	
+	/**
+	 * Returns a service message with the following format: "GETCHUNK &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt; &lt;ChunkNo&gt;".
+	 * 
+	 * @param peerID the numeric identifier of the sending Peer
+	 * @param state the Protocol State object relevant to this operation
+	 * @return the binary data representing the message
+	 */
+	public byte[] createGetchunkMsg(int peerID, ProtocolState state) {
+		
+		String header = "GETCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
+		
+        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
+        return header.getBytes();
+	}
+	
+	/**
+	 * Returns a service message with the following format: "CHUNK &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt; &lt;ChunkNo&gt;".
+	 * 
+	 * @param peerID the numeric identifier of the sending Peer
+	 * @param state the Protocol State object relevant to this operation
+	 * @return the binary data representing the message
+	 */
+	public byte[] createChunkMsg(int peerID, ProtocolState state) throws IOException {
+		
+		// Get binary file data
+	    byte[] buf = new byte[dataSize];
+		int nRead = this.getData(state.getFilepath(), 0, buf);
+		
+        SystemManager.getInstance().logPrint("chunk nRead: " + nRead, SystemManager.LogLevel.VERBOSE);
+	    
+	    // Merge header and body to single byte[]
+		String header = "CHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
+		
+        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
+		
+		if(nRead <= 0) return header.getBytes();
+		else return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
 	}
 	
 	/**
@@ -176,8 +217,7 @@ public class ServiceMessage {
 		// Separate header into string
 		String header = msg.substring(0, this.lineEndI);
 		SystemManager.getInstance().logPrint("received: " + header, SystemManager.LogLevel.SERVICE_MSG);
-		
-		// TODO validate every protocol header
+
 		// Divide by fields and validate header
 		String[] headerFields = header.split("[ ]+");
 
@@ -203,14 +243,14 @@ public class ServiceMessage {
 		// Validate header size and fields for each known protocol type
 		switch(protocol) {
 		
-		// BACKUP protocol initiator messages
+		// BACKUP protocol initiator message
 		case "PUTCHUNK":
 			
-			if(!validateHeaderSize(fields.length, backupMinMsgLen, "BACKUP")) return false;
+			if(!validateHeaderSize(fields.length, putchunkMinMsgLen, "PUTCHUNK")) return false;
 			if(!validatePutchunk(fields)) return false;
 			return true;
 			
-		// BACKUP protocol response messages
+		// BACKUP protocol response message
 		case "STORED":
 			
 			if(!validateHeaderSize(fields.length, storedMinMsgLen, "STORED")) return false;
@@ -222,6 +262,20 @@ public class ServiceMessage {
 			
 			if(!validateHeaderSize(fields.length, deleteMinMsgLen, "DELETE")) return false;
 			if(!validateDelete(fields)) return false;
+			return true;
+			
+		// RESTORE protocol initiator message
+		case "GETCHUNK":
+			
+			if(!validateHeaderSize(fields.length, getchunkMinMsgLen, "GETCHUNK")) return false;
+			if(!validateGetchunk(fields)) return false;
+			return true;
+		
+		// RESTORE protocol response message
+		case "CHUNK":
+			
+			if(!validateHeaderSize(fields.length, chunkMinMsgLen, "CHUNK")) return false;
+			if(!validateChunk(fields)) return false;
 			return true;
 			
 		// Unknown protocols
@@ -274,6 +328,34 @@ public class ServiceMessage {
 	}
 
 	/**
+	 * Validates a GETCHUNK message and returns whether it's valid.
+	 * 
+	 * @param fields the header fields
+	 * @return whether the GETCHUNK message is valid
+	 */
+	private boolean validateGetchunk(String[] fields) {
+		
+		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI])
+				&& validateHash(fields[hashI]) && validateChunkNo(fields[backChunkNoI]);
+		
+		return validate;
+	}
+	
+	/**
+	 * Validates a CHUNK message and returns whether it's valid.
+	 * 
+	 * @param fields the header fields
+	 * @return whether the CHUNK message is valid
+	 */
+	private boolean validateChunk(String[] fields) {
+		
+		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI])
+				&& validateHash(fields[hashI]) && validateChunkNo(fields[backChunkNoI]);
+		
+		return validate;
+	}
+	
+	/**
 	 * Validates the number of fields in the header and returns whether it's valid.
 	 * 
 	 * @param length the length of the header field
@@ -284,13 +366,13 @@ public class ServiceMessage {
 	private boolean validateHeaderSize(int length, int expectedLen, String protocol) {
 		
 		if(length < expectedLen) {
-			SystemManager.getInstance().logPrint(expectedLen + " fields are needed for " + protocol + " protocol, ignoring message...", SystemManager.LogLevel.DEBUG);
+			SystemManager.getInstance().logPrint(expectedLen + " fields are needed for " + protocol + ", ignoring message...", SystemManager.LogLevel.DEBUG);
 			return false;
 		}
 		
 		if(length > expectedLen) {
-			if(!ignoreMinorErrors) SystemManager.getInstance().logPrint("extra fields found for " + protocol + " protocol, ignoring message...", SystemManager.LogLevel.DEBUG);
-			else SystemManager.getInstance().logPrint("extra fields found for " + protocol + " protocol, ignoring error...", SystemManager.LogLevel.DEBUG);
+			if(!ignoreMinorErrors) SystemManager.getInstance().logPrint("extra fields found for " + protocol + ", ignoring message...", SystemManager.LogLevel.DEBUG);
+			else SystemManager.getInstance().logPrint("extra fields found for " + protocol + ", ignoring error...", SystemManager.LogLevel.DEBUG);
 			return ignoreMinorErrors;
 		}
 		

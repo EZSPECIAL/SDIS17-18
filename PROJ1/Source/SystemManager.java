@@ -65,7 +65,6 @@ public class SystemManager {
 		SystemManager.peerID = peerID;
 	}
 	
-	// ASK is this going to cause problems with threading?
 	/**
 	 * Handles logging of messages, prints only if the log level matches the current log level and
 	 * can print to console and/or a log file according to the current settings.
@@ -74,7 +73,7 @@ public class SystemManager {
 	 * @param message string to log
 	 * @param desiredLogLevel log level of this message
 	 */
-	public void logPrint(String message, LogLevel desiredLogLevel) {
+	public synchronized void logPrint(String message, LogLevel desiredLogLevel) {
 		
 		if(logLevel.equals(LogLevel.NONE)) return;
 

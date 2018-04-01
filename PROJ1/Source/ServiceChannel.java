@@ -63,7 +63,7 @@ public class ServiceChannel implements Runnable {
 	 * 
 	 * @param data the data to send
 	 */
-	public void send(byte[] data) throws IOException {
+	public synchronized void send(byte[] data) throws IOException {
 		
 		DatagramPacket packet = new DatagramPacket(data, data.length, this.addr, this.port);
 		
