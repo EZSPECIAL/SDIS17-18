@@ -32,7 +32,7 @@ public class RestoreProtocol implements Runnable {
 		String key = null;
 		try {
 			key = this.initializeProtocolInstance(peer);
-		} catch (NoSuchAlgorithmException | IOException e) {
+		} catch(NoSuchAlgorithmException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception on restore protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
 			return;
@@ -52,7 +52,7 @@ public class RestoreProtocol implements Runnable {
 				SystemManager.getInstance().logPrint("not enough chunk data received", SystemManager.LogLevel.DEBUG);
 				SystemManager.getInstance().logPrint("failed " + resMsg, SystemManager.LogLevel.NORMAL);
 			}
-		} catch (InterruptedException | IOException e) {
+		} catch(InterruptedException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception or thread interruption on restore protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
 			peer.getProtocols().remove(key);

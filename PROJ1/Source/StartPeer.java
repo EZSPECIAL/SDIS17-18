@@ -146,7 +146,7 @@ public class StartPeer {
 		InetAddress addr = null;
 		try {
 			addr = InetAddress.getByName(s);
-		} catch (UnknownHostException e) {
+		} catch(UnknownHostException e) {
 			printErrExit("unknown host \"" + s + "\"!");
 		}
 		

@@ -21,7 +21,7 @@ public class SystemManager {
 	private static int peerID;
 	
 	// Log management block
-	private static LogLevel logLevel = LogLevel.NORMAL;
+	private static LogLevel logLevel = LogLevel.SERVICE_MSG;
 	private static LogMethod logMethod = LogMethod.CONSOLE;
 	private static final String logFolder = "logFiles";
 	private static final String logPrefix = "PeerLog_";
@@ -106,7 +106,7 @@ public class SystemManager {
 		try {
 			toCreate.createNewFile();
 			Files.write(toWrite, lines, Charset.forName("UTF-8"), StandardOpenOption.APPEND);
-		} catch (IOException e) {
+		} catch(IOException e) {
 			if(logLevel.equals(LogLevel.VERBOSE)) {
 				System.out.println("IO exception on log write");
 				e.printStackTrace();

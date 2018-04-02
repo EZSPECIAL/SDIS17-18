@@ -8,7 +8,7 @@ import java.util.concurrent.Executors;
 public class ServiceChannel implements Runnable {
 
 	private static final int packetSize = 65000;
-	private static final int executorThreadsMax = 5;
+	private static final int executorThreadsMax = 10;
 
 	// Multicast socket settings
 	private InetAddress addr;
@@ -16,7 +16,7 @@ public class ServiceChannel implements Runnable {
 	private String channelName;
 	private MulticastSocket socket;
 
-	ExecutorService executor = Executors.newFixedThreadPool(executorThreadsMax);
+	private ExecutorService executor = Executors.newFixedThreadPool(executorThreadsMax);
 
 	/**
 	 * A Service Channel is an object that provides methods for receiving and sending UDP packets
@@ -34,7 +34,7 @@ public class ServiceChannel implements Runnable {
 
 		try {
 			this.socket = new MulticastSocket(port);
-		} catch (IOException e) {
+		} catch(IOException e) {
 
 			String msg = "failed to open socket with name \"" + channelName + "\"";
 			SystemManager.getInstance().logPrint(msg, SystemManager.LogLevel.NORMAL);
@@ -86,7 +86,7 @@ public class ServiceChannel implements Runnable {
 			DatagramPacket packet;
 			try {
 				packet = this.listen();
-			} catch (IOException e) {
+			} catch(IOException e) {
 				SystemManager.getInstance().logPrint("I/O Exception on backup protocol!", SystemManager.LogLevel.NORMAL);
 				e.printStackTrace();
 				return;

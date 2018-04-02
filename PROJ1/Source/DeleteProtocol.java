@@ -28,7 +28,7 @@ public class DeleteProtocol implements Runnable {
 		ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.DELETE, new ServiceMessage());
 		try {
 			state.initDeleteState(peer.getProtocolVersion(), filepath);
-		} catch (NoSuchAlgorithmException | IOException e) {
+		} catch(NoSuchAlgorithmException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception on delete protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
 			return;
@@ -43,7 +43,7 @@ public class DeleteProtocol implements Runnable {
 			peer.getMcc().send(msg);
 			Thread.sleep(Peer.consecutiveMsgWaitMS);
 			peer.getMcc().send(msg);
-		} catch (InterruptedException | IOException e) {
+		} catch(InterruptedException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception or thread interruption on delete protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
 			return;

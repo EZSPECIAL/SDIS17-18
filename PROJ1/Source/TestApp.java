@@ -114,10 +114,10 @@ public class TestApp {
 		} catch(IOException e) {
 			System.out.println("TestApp: IO exception executing remote backup " + e.toString());
 			e.printStackTrace();
-		} catch (NoSuchAlgorithmException e) {
+		} catch(NoSuchAlgorithmException e) {
 			System.out.println("TestApp: no such algorithm exception executing remote backup " + e.toString());
 			e.printStackTrace();
-		} catch (InterruptedException e) {
+		} catch(InterruptedException e) {
 			System.out.println("TestApp: interrupted thread exception executing remote backup " + e.toString());
 			e.printStackTrace();
 		}
@@ -136,10 +136,10 @@ public class TestApp {
 		} catch(IOException e) {
 			System.out.println("TestApp: IO exception executing remote restore " + e.toString());
 			e.printStackTrace();
-		} catch (NoSuchAlgorithmException e) {
+		} catch(NoSuchAlgorithmException e) {
 			System.out.println("TestApp: no such algorithm exception executing remote restore " + e.toString());
 			e.printStackTrace();
-		} catch (InterruptedException e) {
+		} catch(InterruptedException e) {
 			System.out.println("TestApp: interrupted thread exception executing remote restore " + e.toString());
 			e.printStackTrace();
 		}
@@ -157,10 +157,10 @@ public class TestApp {
 		} catch(IOException e) {
 			System.out.println("TestApp: IO exception executing remote delete " + e.toString());
 			e.printStackTrace();
-		} catch (NoSuchAlgorithmException e) {
+		} catch(NoSuchAlgorithmException e) {
 			System.out.println("TestApp: no such algorithm exception executing remote delete " + e.toString());
 			e.printStackTrace();
-		} catch (InterruptedException e) {
+		} catch(InterruptedException e) {
 			System.out.println("TestApp: interrupted thread exception executing remote delete " + e.toString());
 			e.printStackTrace();
 		}

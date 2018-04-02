@@ -1,9 +1,0 @@
-Currently:
-ServiceChannel.send()
-SystemManager.logPrint()
-
-Old:
-ProtocolState.getCurrentChunkNo
-ProtocolState.getRespondedID
-ProtocolState.isStoredCountCorrect
-ProtocolState.isFinished

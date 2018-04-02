@@ -80,6 +80,20 @@ Delete
     - all peers delete their chunks of the file
     - send N times to ensure reception of message
 
+Restore
+
+    Initiator
+    - MC -> GETCHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+    - save file with _restore appended "file_restored.png" or "file_restored" if no extension
+    - save in same filepath as original file or a "restored" folder
+
+    Peers (that have the file-chunk)
+    - MDR -> CHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF><Body>
+    - random delay between 0 and 400ms
+    - "To avoid flooding the host with CHUNK messages, each peer shall wait for a random time uniformly distributed
+between 0 and 400 ms, before sending the CHUNK message. If it receives a CHUNK message before that time expires,
+it will not send the CHUNK message."
+
 ---------------------
 THREADING
 ---------------------
@@ -107,3 +121,7 @@ Version 4
 
     - receiver threads now use worker threads for processing so that they can keep listening
     - java.util.concurrent.ThreadPoolExecutor
+
+Version 5
+
+    - no thread.sleep() for timeouts with java.util.concurrent.ScheduledThreadPoolExecutor which allows a "timeout" handler

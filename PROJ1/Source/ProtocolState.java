@@ -14,7 +14,7 @@ import javax.xml.bind.DatatypeConverter;
 
 public class ProtocolState {
 	
-	public enum ProtocolType {NONE, BACKUP, RESTORE, DELETE, RECLAIM}
+	public enum ProtocolType {NONE, BACKUP, RESTORE, DELETE, RECLAIM, CHUNK_STOP}
 	
 	private static final int chunkSize = 64000;
 	private static final int maxChunkTotal = 1000001;
@@ -39,6 +39,7 @@ public class ProtocolState {
 	private int attempts;
 	private HashSet<Integer> respondedID = new HashSet<Integer>();
 	private boolean isStoredCountCorrect = false;
+	private boolean isChunkMsgAlreadySent = false;
 	private ConcurrentHashMap<Long, byte[]> restoredChunks = new ConcurrentHashMap<Long, byte[]>(8, 0.9f, 1);
 	
 	private boolean isFinished;
@@ -180,7 +181,7 @@ public class ProtocolState {
 	 * @param filepath the file path to calculate total chunks from
 	 * @return the numeric value of the total chunks
 	 */
-	private long getTotalChunks(String filepath) throws IOException {
+	public long getTotalChunks(String filepath) throws IOException {
 
 		Path path = Paths.get(filepath);
 		Files.size(path);
@@ -376,6 +377,13 @@ public class ProtocolState {
 	}
 
 	/**
+	 * @return whether a CHUNK message was found for the same CHUNK message that would've been sent
+	 */
+	public boolean isChunkMsgAlreadySent() {
+		return isChunkMsgAlreadySent;
+	}
+
+	/**
 	 * @return the hash map of currently stored chunks
 	 */
 	public ConcurrentHashMap<Long, byte[]> getRestoredChunks() {
@@ -394,6 +402,13 @@ public class ProtocolState {
 	 */
 	public void setStoredCountCorrect(boolean isStoredCountCorrect) {
 		this.isStoredCountCorrect = isStoredCountCorrect;
+	}
+	
+	/**
+	 * @param isChunkMsgAlreadySent whether a CHUNK message was found for the same CHUNK message that would've been sent
+	 */
+	public void setChunkMsgAlreadySent(boolean isChunkMsgAlreadySent) {
+		this.isChunkMsgAlreadySent = isChunkMsgAlreadySent;
 	}
 	
 	/**

@@ -48,7 +48,7 @@ public class BackupProtocol implements Runnable {
 		try {
 			if(this.putchunkLoop(peer, state)) SystemManager.getInstance().logPrint("finished " + backMsg, SystemManager.LogLevel.NORMAL);
 			else SystemManager.getInstance().logPrint("failed " + backMsg, SystemManager.LogLevel.NORMAL);
-		} catch (InterruptedException | IOException e) {
+		} catch(InterruptedException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception or thread interruption on backup protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
 			peer.getProtocols().remove(key);
@@ -103,7 +103,7 @@ public class BackupProtocol implements Runnable {
 				state.incrementCurrentChunkNo();
 				state.resetStoredCount();
 			} else {
-				SystemManager.getInstance().logPrint("not enough STORED messages whithin " + timeoutMS + " ms", SystemManager.LogLevel.DEBUG);
+				SystemManager.getInstance().logPrint("not enough STORED messages whithin " + timeoutMS + "ms", SystemManager.LogLevel.DEBUG);
 				state.incrementAttempts();
 			}
 

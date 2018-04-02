@@ -35,7 +35,8 @@ public class Peer implements RMITesting {
 	public static final int repDegI = 5;
 	
 	// Private constants
-	private static final int executorThreadsMax = 10;
+	private static final int executorThreadsMax = 15;
+	private static final int baseRestoreTimeoutMS = 800;
 	
 	// Peer info
 	private String protocolVersion;
@@ -48,7 +49,7 @@ public class Peer implements RMITesting {
 	private ServiceChannel mdr;
 	
 	private ConcurrentHashMap<String, ProtocolState> protocols = new ConcurrentHashMap<String, ProtocolState>(8, 0.9f, 1);
-	ScheduledExecutorService executor = Executors.newScheduledThreadPool(executorThreadsMax);
+	private ScheduledExecutorService executor = Executors.newScheduledThreadPool(executorThreadsMax);
 
 	private static Peer singleton = new Peer();
 	
@@ -138,15 +139,20 @@ public class Peer implements RMITesting {
 	}
 	
 	// LATER update local database
-	// TODO use time out based on file total chunks
 	@Override
 	public void remoteRestore(String filepath) throws IOException, NoSuchAlgorithmException, InterruptedException {
+		
+		ProtocolState state = new ProtocolState(new ServiceMessage());
+		Long timeoutMS = state.getTotalChunks(filepath) * baseRestoreTimeoutMS;
+		
+		Thread.currentThread().setName("Restore " + Thread.currentThread().getId());
+		SystemManager.getInstance().logPrint("restore timeout: " + timeoutMS + "ms", SystemManager.LogLevel.VERBOSE);
 		
 		Future<?> handler = executor.submit(new RestoreProtocol(filepath));
 
 		executor.schedule(() -> {
 			handler.cancel(true);
-		}, 5, TimeUnit.SECONDS);
+		}, timeoutMS, TimeUnit.MILLISECONDS);
 	}
 
 	// LATER delete enh use new ProtocolType
@@ -160,7 +166,7 @@ public class Peer implements RMITesting {
 	@Override
 	public void remoteReclaim(int maxKB) throws RemoteException {
 		
-		// TODO reclaim protocol
+		// LATER reclaim protocol
 
 		String reclMsg = "reclaim: " + maxKB;
 		SystemManager.getInstance().logPrint("started " + reclMsg, SystemManager.LogLevel.NORMAL);
@@ -172,7 +178,7 @@ public class Peer implements RMITesting {
 	@Override
 	public String remoteGetInfo() throws RemoteException {
 		
-		// TODO info protocol
+		// LATER info protocol
 
 		return null;
 	}
@@ -217,6 +223,13 @@ public class Peer implements RMITesting {
 	 */
 	public ConcurrentHashMap<String, ProtocolState> getProtocols() {
 		return protocols;
+	}
+
+	/**
+	 * @return the scheduled executor service of the Peer
+	 */
+	public ScheduledExecutorService getExecutor() {
+		return executor;
 	}
 
 }

@@ -3,6 +3,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 public class SystemHandler implements Runnable {
 
@@ -21,7 +22,7 @@ public class SystemHandler implements Runnable {
 		
 		try {
 			runProtocol(this.packet);
-		} catch (IOException | InterruptedException e) {
+		} catch(IOException | InterruptedException e) {
 			SystemManager.getInstance().logPrint("I/O Exception or thread interruption on receiver!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
 			return;
@@ -121,10 +122,8 @@ public class SystemHandler implements Runnable {
 	    // Wait a random millisecond delay from a previously specified range and then send the message
 	    int waitTimeMS = ThreadLocalRandom.current().nextInt(Peer.minResponseWaitMS, Peer.maxResponseWaitMS + 1);
 	    SystemManager.getInstance().logPrint("waiting " + waitTimeMS + "ms", SystemManager.LogLevel.DEBUG);
-	    Thread.sleep(waitTimeMS); // LATER use timeout on thread handler
-	    
-	    byte[] msg = state.getParser().createStoredMsg(peer.getPeerID(), state);
-	    peer.getMcc().send(msg);
+
+	    peer.getExecutor().schedule(new TimeoutHandler(state, ProtocolState.ProtocolType.BACKUP, this.channelName), waitTimeMS, TimeUnit.MILLISECONDS);
 	}
 	
 	// LATER backup enh use new protocol type to store STORED in non initiators
@@ -198,7 +197,6 @@ public class SystemHandler implements Runnable {
 	}
 	
 	// LATER update local database
-	// LATER use ProtocolState to avoid sending superfluous CHUNK message
 	/**
 	 * Handles RESTORE protocol by checking local storage for requested SHA256 + chunkNo and sending
 	 * the CHUNK message if found.
@@ -217,16 +215,16 @@ public class SystemHandler implements Runnable {
 	    	return;
 	    }
 	    
-	    // Prepare the necessary fields for the response message
-	    state.initRestoreResponseState(peer.getProtocolVersion(), state.getFields()[Peer.hashI], chunkPath, state.getFields()[Peer.chunkNoI]);
-	    
+	    String protocolKey = peer.getPeerID() + state.getFields()[Peer.hashI] + state.getFields()[Peer.chunkNoI] + ProtocolState.ProtocolType.CHUNK_STOP.name();
+	    if(peer.getProtocols().putIfAbsent(protocolKey, state) == null) {
+	    	SystemManager.getInstance().logPrint("key inserted: " + protocolKey, SystemManager.LogLevel.VERBOSE);
+	    }
+
 	    // Wait a random millisecond delay from a previously specified range and then send the message
 	    int waitTimeMS = ThreadLocalRandom.current().nextInt(Peer.minResponseWaitMS, Peer.maxResponseWaitMS + 1);
 	    SystemManager.getInstance().logPrint("waiting " + waitTimeMS + "ms", SystemManager.LogLevel.DEBUG);
-	    Thread.sleep(waitTimeMS); // LATER use timeout on thread handler
-	    
-	    byte[] msg = state.getParser().createChunkMsg(peer.getPeerID(), state);
-	    peer.getMdr().send(msg);
+
+	    peer.getExecutor().schedule(new TimeoutHandler(state, ProtocolState.ProtocolType.RESTORE, this.channelName, protocolKey, chunkPath), waitTimeMS, TimeUnit.MILLISECONDS);
 	}
 	
 	// LATER update local database
@@ -238,12 +236,20 @@ public class SystemHandler implements Runnable {
 	 */
 	private void handleChunk(Peer peer, ProtocolState state) throws IOException {
 
+		// Check if a GETCHUNK for this CHUNK exists and if so set CHUNK already sent flag
+	    String chunkKey = peer.getPeerID() + state.getFields()[Peer.hashI] + state.getFields()[Peer.chunkNoI] + ProtocolState.ProtocolType.CHUNK_STOP.name();
+	    ProtocolState chunkState = peer.getProtocols().get(chunkKey);
+	    
+	    if(chunkState != null) {
+	    	chunkState.setChunkMsgAlreadySent(true);
+	    } else SystemManager.getInstance().logPrint("received CHUNK but no CHUNK_STOP protocol matched, key: " + chunkKey, SystemManager.LogLevel.VERBOSE);
+	    
 		// Check if this RESTORE protocol exists
 		String protocolKey = peer.getPeerID() + state.getFields()[Peer.hashI] + ProtocolState.ProtocolType.RESTORE.name();
 		ProtocolState currState = peer.getProtocols().get(protocolKey);
-
+	    
 		if(currState == null) {
-			SystemManager.getInstance().logPrint("received CHUNK but no protocol matched, key: " + protocolKey, SystemManager.LogLevel.DEBUG);
+			SystemManager.getInstance().logPrint("received CHUNK but no RESTORE protocol matched, key: " + protocolKey, SystemManager.LogLevel.DEBUG);
 			return;
 		}
 
