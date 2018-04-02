@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class RestoreProtocol implements Runnable {
 
+	private static final int consecutiveMsgCount = 5;
 	private String filepath;
 	
 	/**
@@ -100,17 +101,43 @@ public class RestoreProtocol implements Runnable {
 	private boolean getchunkLoop(Peer peer, ProtocolState state) throws IOException, InterruptedException {
 		
 		while(!state.isFinished()) {
-		
-			// Create and send the GETCHUNK message for the current chunk
-			byte[] msg = state.getParser().createGetchunkMsg(peer.getPeerID(), state);
-			peer.getMcc().send(msg);
+			
+			int sent = 0;
+			while(sent < consecutiveMsgCount && !state.isFinished()) {
+			
+				// Create and send the GETCHUNK message for the current chunk
+				byte[] msg = state.getParser().createGetchunkMsg(peer.getPeerID(), state);
+				peer.getMcc().send(msg);
 
-			Thread.sleep(Peer.consecutiveMsgWaitMS);
-			state.incrementCurrentChunkNo();
+				Thread.sleep(Peer.consecutiveMsgWaitMS);
+				state.incrementCurrentChunkNo();
+				sent++;
+			}
+			
+			if(!checkReceivedChunks(state)) return false;
 		}
 		
 		// Wait until all CHUNK messages arrive and then write file
-		return this.writeRestoredChunks(peer, state);
+		this.writeRestoredChunks(peer, state);
+		return true;
+	}
+	
+	/**
+	 * Checks received chunk data hash map size to verify that expected CHUNK messages
+	 * have been received.
+	 * 
+	 * @param state the Protocol State object relevant to this operation
+	 * @return whether enough CHUNK messages were received
+	 */
+	private boolean checkReceivedChunks(ProtocolState state) {
+		
+		ConcurrentHashMap<Long, byte[]> chunks;
+		do {
+			if(Thread.interrupted()) return false;
+			chunks = state.getRestoredChunks();
+		} while(chunks.size() != state.getCurrentChunkNo());
+		
+		return true;
 	}
 	
 	/**
@@ -120,14 +147,9 @@ public class RestoreProtocol implements Runnable {
 	 * @param state the Protocol State object relevant to this operation
 	 * @return whether the restore was successful
 	 */
-	private boolean writeRestoredChunks(Peer peer, ProtocolState state) throws IOException {
+	private void writeRestoredChunks(Peer peer, ProtocolState state) throws IOException {
 		
-		// Check that all chunks were received or abort if scheduled timeout happened
-		ConcurrentHashMap<Long, byte[]> chunks;
-		do {
-			if(Thread.interrupted()) return false;
-			chunks = state.getRestoredChunks();
-		} while(chunks.size() != state.getChunkTotal());
+		ConcurrentHashMap<Long, byte[]> chunks = state.getRestoredChunks();
 
 		// Create filepaths for restored file
 		String folderPath = "../" + Peer.restoredFolderName;
@@ -158,7 +180,5 @@ public class RestoreProtocol implements Runnable {
 			output.write(entry.getValue());
 		}
 		output.close();
-		
-		return true;
 	}
 }

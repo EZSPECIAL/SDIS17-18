@@ -19,7 +19,7 @@ public class Peer implements RMITesting {
 	public static final int maxAttempts = 5;
 	public static final int minResponseWaitMS = 0;
 	public static final int maxResponseWaitMS = 400;
-	public static final int consecutiveMsgWaitMS = 50;
+	public static final int consecutiveMsgWaitMS = 100;
 
 	public static final String storageFolderName = "Storage";
 	public static final String peerFolderPrefix = "Peer_";

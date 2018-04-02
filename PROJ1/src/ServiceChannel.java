@@ -8,7 +8,7 @@ import java.util.concurrent.Executors;
 public class ServiceChannel implements Runnable {
 
 	private static final int packetSize = 65000;
-	private static final int executorThreadsMax = 10;
+	private static final int executorThreadsMax = 20;
 
 	// Multicast socket settings
 	private InetAddress addr;
