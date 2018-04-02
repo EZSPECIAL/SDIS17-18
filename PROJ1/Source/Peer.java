@@ -8,25 +8,29 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.NoSuchAlgorithmException;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 public class Peer implements RMITesting {
 
 	// General constants
-	private static final int baseTimeoutMS = 1000;
-	private static final int maxAttempts = 5;
+	public static final int baseTimeoutMS = 1000;
+	public static final int maxAttempts = 5;
 	private static final int minResponseWaitMS = 0;
 	private static final int maxResponseWaitMS = 400;
-	private static final int deleteWaitMS = 150;
-	private static final int restoreWaitMS = 400;
+	public static final int deleteWaitMS = 150;
+	public static final int restoreWaitMS = 400;
 	private static final int restoreChunkWaitMS = 400;
+	private static final int executorThreadsMax = 10;
 
 	private static final String peerFolderPrefix = "Peer_";
 	private static final String peerFolderSuffix = "_Area";
-	private static final String restoredFolderName = "Restored";
-	private static final String restoredPrefix = "_restoredBy";
+	public static final String restoredFolderName = "Restored";
+	public static final String restoredPrefix = "_restoredBy";
 	
 	// General header indices
 	private static final int protocolI = 0;
@@ -47,6 +51,7 @@ public class Peer implements RMITesting {
 	private ServiceChannel mdr;
 	
 	private ConcurrentHashMap<String, ProtocolState> protocols = new ConcurrentHashMap<String, ProtocolState>(8, 0.9f, 1);
+	ScheduledExecutorService executor = Executors.newScheduledThreadPool(executorThreadsMax);
 
 	private static Peer singleton = new Peer();
 	
@@ -213,7 +218,7 @@ public class Peer implements RMITesting {
 	    this.mcc.send(msg);
 	}
 	
-	// LATER make map key be (this.id, senderID, SHA256, ProtocolType) -> ProtocolState
+	// LATER backup enh use new protocol type to store STORED in non initiators
 	/**
 	 * Handles the responses to a BACKUP protocol by counting the unique STORED responses
 	 * up to the desired replication degree for this protocol instance.
@@ -229,9 +234,10 @@ public class Peer implements RMITesting {
 		}
 		
 		// Check if this BACKUP protocol exists
-		ProtocolState currState = this.protocols.get("single");
+		String protocolKey = this.peerID + state.getFields()[hashI] + ProtocolState.ProtocolType.BACKUP.name();
+		ProtocolState currState = this.protocols.get(protocolKey);
 		if(currState == null) {
-			SystemManager.getInstance().logPrint("received STORED but no protocol matched", SystemManager.LogLevel.DEBUG);
+			SystemManager.getInstance().logPrint("received STORED but no protocol matched, key: " + protocolKey, SystemManager.LogLevel.DEBUG);
 			return;
 		}
 
@@ -281,7 +287,7 @@ public class Peer implements RMITesting {
 	}
 	
 	// LATER update local database
-	// LATER make map key be (this.id, senderID, SHA256, ProtocolType) -> ProtocolState
+	// LATER use ProtocolState to avoid sending superfluous CHUNK message
 	/**
 	 * Handles RESTORE protocol by checking local storage for requested SHA256 + chunkNo and sending
 	 * the CHUNK message if found.
@@ -313,7 +319,6 @@ public class Peer implements RMITesting {
 	}
 	
 	// LATER update local database
-	// LATER make map key be (this.id, senderID, SHA256, ProtocolType) -> ProtocolState
 	/**
 	 * Handles the responses to a RESTORE protocol by passing along the chunk data received.
 	 * 
@@ -322,9 +327,11 @@ public class Peer implements RMITesting {
 	private void handleChunk(ProtocolState state) throws IOException {
 
 		// Check if this RESTORE protocol exists
-		ProtocolState currState = this.protocols.get("single");
+		String protocolKey = this.peerID + state.getFields()[hashI] + ProtocolState.ProtocolType.RESTORE.name();
+		ProtocolState currState = this.protocols.get(protocolKey);
+
 		if(currState == null) {
-			SystemManager.getInstance().logPrint("received CHUNK but no protocol matched", SystemManager.LogLevel.DEBUG);
+			SystemManager.getInstance().logPrint("received CHUNK but no protocol matched, key: " + protocolKey, SystemManager.LogLevel.DEBUG);
 			return;
 		}
 
@@ -341,171 +348,39 @@ public class Peer implements RMITesting {
 	 * 
 	 * @param dirPath the directory path to create
 	 */
-	private void createDirIfNotExists(String dirPath) {
+	public void createDirIfNotExists(String dirPath) {
 		
 	    File directory = new File(dirPath);
 	    if(!directory.exists()) {
 	        directory.mkdir();
 	    }
 	}
-
-	/**
-	 * Writes a set of chunk data to a single file. The file path is fixed and is based on the filename and PeerID.
-	 * 
-	 * @param state the Protocol State object relevant to this operation
-	 * @return whether the operation was successful
-	 */
-	private boolean writeRestoredChunks(ProtocolState state) throws IOException {
-		
-		// Check that all chunks were received
-		ConcurrentHashMap<Long, byte[]> chunks = state.getRestoredChunks();
-		if(chunks.size() != state.getChunkTotal()) return false;
-		
-		// Create filepaths for restored file
-		String folderPath = "./" + restoredFolderName;
-		String[] split = state.getFilename().split("[.]");
-		
-		String restoredFilepath;
-		if(split.length <= 1) {
-			restoredFilepath = folderPath + "/" + state.getFilename() + restoredPrefix + "_" + this.peerID;
-		} else {
-			split[split.length - 2] = split[split.length - 2] + restoredPrefix + "_" + this.peerID;
-			restoredFilepath = folderPath + "/" + String.join(".", split);
-		}
-		
-		SystemManager.getInstance().logPrint("restoring file in \"" + restoredFilepath + "\"", SystemManager.LogLevel.DEBUG);
-		
-		// Append all binary data to form restored file
-		this.createDirIfNotExists("./" + restoredFolderName);
-
-		File chunk = new File(restoredFilepath);
-		FileOutputStream output = new FileOutputStream(chunk, true);
-		for(Map.Entry<Long, byte[]> entry : chunks.entrySet()) {
-			output.write(entry.getValue());
-		}
-		output.close();
-		
-		return true;
-	}
 	
 	// LATER update local database
 	@Override
 	public void remoteBackup(String filepath, int repDeg) throws IOException, NoSuchAlgorithmException, InterruptedException {
 		
-		Thread.currentThread().setName("RMI");
-		
-		String backMsg = "backup: " + filepath + " - " + repDeg;
-		SystemManager.getInstance().logPrint("started " + backMsg, SystemManager.LogLevel.NORMAL);
-
-		// Initialise protocol state for backing up the file
-		this.protocols.put("single",  new ProtocolState(ProtocolState.ProtocolType.BACKUP, new ServiceMessage()));
-		ProtocolState state = this.protocols.get("single");
-		
-		if(!state.initBackupState(this.protocolVersion, filepath, repDeg)) {
-			String backFileSize = "cannot backup files larger than 64GB!";
-			SystemManager.getInstance().logPrint(backFileSize, SystemManager.LogLevel.NORMAL);
-			return;
-		}
-
-		// Send PUTCHUNK and wait for repDeg STORED responses
-		while(state.getAttempts() < maxAttempts) {
-		
-			// Prepare and send next PUTCHUNK message
-			byte[] msg = state.getParser().createPutchunkMsg(this.peerID, state);
-			this.mdb.send(msg);
-
-			Thread.sleep((int) (baseTimeoutMS * Math.pow(2, state.getAttempts())));
-
-			// Check if expected unique STORED messages were received
-			if(state.isStoredCountCorrect()) {
-				state.incrementCurrentChunkNo();
-				state.resetStoredCount();
-			} else {
-				String timedOutMsg = "not enough STORED messages whithin " + (int) (baseTimeoutMS * Math.pow(2, state.getAttempts())) + " ms";
-				SystemManager.getInstance().logPrint(timedOutMsg, SystemManager.LogLevel.DEBUG);
-				state.incrementAttempts();
-			}
-
-			if(state.isFinished()) break;
-		}
-
-		// Finish protocol instance
-		if(state.isFinished()) SystemManager.getInstance().logPrint("finished " + backMsg, SystemManager.LogLevel.NORMAL);
-		else {
-			state.setFinished(true);
-			SystemManager.getInstance().logPrint("failed " + backMsg, SystemManager.LogLevel.NORMAL);
-		}
-		
-		this.protocols.remove("single");
+		executor.execute(new BackupProtocol(filepath, repDeg));
 	}
 	
 	// LATER update local database
-	// LATER sliding window for GETCHUNK
-	// LATER remove thread sleep
+	// TODO use time out based on file total chunks
 	@Override
 	public void remoteRestore(String filepath) throws IOException, NoSuchAlgorithmException, InterruptedException {
 		
-		Thread.currentThread().setName("RMI");
+		Future<?> handler = executor.submit(new RestoreProtocol(filepath));
 
-		String resMsg = "restore: " + filepath;
-		SystemManager.getInstance().logPrint("started " + resMsg, SystemManager.LogLevel.NORMAL);
-		
-		// Initialise protocol state for restoring file
-		this.protocols.put("single",  new ProtocolState(ProtocolState.ProtocolType.RESTORE, new ServiceMessage()));
-		ProtocolState state = this.protocols.get("single");
-
-		if(!state.initRestoreState(this.protocolVersion, filepath)) {
-			String backFileSize = "cannot restore files larger than 64GB!";
-			SystemManager.getInstance().logPrint(backFileSize, SystemManager.LogLevel.NORMAL);
-			return;
-		}
-		
-		// Send all GETCHUNK messages
-		while(!state.isFinished()) {
-		
-			// Create and send the GETCHUNK message for the current chunk
-			byte[] msg = state.getParser().createGetchunkMsg(this.peerID, state);
-			this.mcc.send(msg);
-
-			Thread.sleep(restoreWaitMS);
-			state.incrementCurrentChunkNo();
-		}
-		
-		// Wait for message processing and then write restored file
-		Thread.sleep(restoreChunkWaitMS);
-		if(!this.writeRestoredChunks(state)) {
-			SystemManager.getInstance().logPrint("not enough chunk data received", SystemManager.LogLevel.DEBUG);
-			SystemManager.getInstance().logPrint("failed " + resMsg, SystemManager.LogLevel.NORMAL);
-			return;
-		}
-		
-		SystemManager.getInstance().logPrint("finished " + resMsg, SystemManager.LogLevel.NORMAL);
-		this.protocols.remove("single");
+		executor.schedule(() -> {
+			handler.cancel(true);
+		}, 5, TimeUnit.SECONDS);
 	}
 
-	// LATER use global protocol state for enhancement
+	// LATER delete enh use new ProtocolType
 	// LATER update local database
 	@Override
 	public void remoteDelete(String filepath) throws IOException, NoSuchAlgorithmException, InterruptedException {
 
-		Thread.currentThread().setName("RMI");
-		
-		String delMsg = "delete: " + filepath;
-		SystemManager.getInstance().logPrint("started " + delMsg, SystemManager.LogLevel.NORMAL);
-		
-		// Initialise protocol state for deleting file
-		ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.DELETE, new ServiceMessage());
-		state.initDeleteState(this.protocolVersion, filepath);
-		
-		// Create and send DELETE message 3 times
-		byte[] msg = state.getParser().createDeleteMsg(this.peerID, state);
-		this.mcc.send(msg);
-		Thread.sleep(deleteWaitMS);
-		this.mcc.send(msg);
-		Thread.sleep(deleteWaitMS);
-		this.mcc.send(msg);
-		
-		SystemManager.getInstance().logPrint("finished " + delMsg, SystemManager.LogLevel.NORMAL);
+		executor.execute(new DeleteProtocol(filepath));
 	}
 
 	@Override
@@ -526,6 +401,48 @@ public class Peer implements RMITesting {
 		// TODO info protocol
 
 		return null;
+	}
+
+	/**
+	 * @return the backup system version
+	 */
+	public String getProtocolVersion() {
+		return protocolVersion;
+	}
+
+	/**
+	 * @return the numeric identifier of the Peer
+	 */
+	public int getPeerID() {
+		return peerID;
+	}
+
+	/**
+	 * @return the multicast control channel
+	 */
+	public ServiceChannel getMcc() {
+		return mcc;
+	}
+
+	/**
+	 * @return the multicast data backup channel
+	 */
+	public ServiceChannel getMdb() {
+		return mdb;
+	}
+
+	/**
+	 * @return the multicast data restore channel
+	 */
+	public ServiceChannel getMdr() {
+		return mdr;
+	}
+
+	/**
+	 * @return the currently running ProtocolState objects
+	 */
+	public ConcurrentHashMap<String, ProtocolState> getProtocols() {
+		return protocols;
 	}
 
 }

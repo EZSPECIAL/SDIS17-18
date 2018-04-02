@@ -96,3 +96,9 @@ Version 2
     - msg thread is endless loop of receive -> process
     - multicaster thread (thread.sleep() for timeout), created for TestApp, terminated on protocol finish
     - TestApp RMI creates multicaster thread to handle protocol invoked
+
+Version 3
+
+    - multiple multicaster instances on any Peer, handle 1 protocol
+    - one thread per channel
+    - java.util.concurrent.ConcurrentHashMap to store protocol state instances
