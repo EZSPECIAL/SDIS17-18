@@ -1,7 +1,14 @@
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.security.NoSuchAlgorithmException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -128,11 +135,20 @@ public class RestoreProtocol implements Runnable {
 		String[] split = state.getFilename().split("[.]");
 		
 		String restoredFilepath;
+		
+		Path attrRead = Paths.get(this.filepath);
+
+		// Get file's access time to build the restored filename
+	    FileTime access = (FileTime) Files.getAttribute(attrRead, "lastAccessTime");
+
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
+		String dateString = String.format(dateFormat.format(access.toMillis()));
+		
 		if(split.length <= 1) {
-			restoredFilepath = folderPath + "/" + state.getFilename() + Peer.restoredSuffix + "_" + peer.getPeerID();
+			restoredFilepath = folderPath + "/" + dateString + " - " + state.getFilename() + Peer.restoredSuffix + "_" + peer.getPeerID();
 		} else {
 			split[split.length - 2] = split[split.length - 2] + Peer.restoredSuffix + "_" + peer.getPeerID();
-			restoredFilepath = folderPath + "/" + String.join(".", split);
+			restoredFilepath = folderPath + "/" + dateString + " - " + String.join(".", split);
 		}
 		
 		SystemManager.getInstance().logPrint("restoring file in \"" + restoredFilepath + "\"", SystemManager.LogLevel.DEBUG);
