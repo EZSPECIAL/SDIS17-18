@@ -135,7 +135,7 @@ public class RestoreProtocol implements Runnable {
 		do {
 			if(Thread.interrupted()) return false;
 			chunks = state.getRestoredChunks();
-		} while(chunks.size() != state.getCurrentChunkNo());
+		} while(chunks.size() < state.getCurrentChunkNo());
 		
 		return true;
 	}

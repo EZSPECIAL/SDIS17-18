@@ -14,7 +14,7 @@ import java.util.List;
 public class SystemManager {
 
 	// Enumerator classes for logging management.
-	public enum LogLevel {NONE, NORMAL, SERVICE_MSG, DEBUG, VERBOSE}
+	public enum LogLevel {NONE, NORMAL, SERVICE_MSG, DEBUG, DATABASE, VERBOSE}
 	public enum LogMethod {CONSOLE, FILE, BOTH}
 	
 	private static SystemManager singleton = new SystemManager();
@@ -65,7 +65,6 @@ public class SystemManager {
 	 * Handles logging of messages, prints only if the log level matches the current log level and
 	 * can print to console and/or a log file according to the current settings.
 	 * 
-	 * @param peerID ID of the Peer that requested the log
 	 * @param message string to log
 	 * @param desiredLogLevel log level of this message
 	 */
@@ -108,8 +107,23 @@ public class SystemManager {
 			if(logLevel.equals(LogLevel.VERBOSE)) {
 				System.out.println("IO exception on log write");
 				e.printStackTrace();
-				System.out.flush();
 			}
+		}
+	}
+	
+	/**
+	 * Handles logging of simple messages, prints only if the log level matches the current log level.
+	 * Only prints to console.
+	 * 
+	 * @param message string to log
+	 * @param desiredLogLevel log level of this message
+	 */
+	public synchronized void simpleLog(String message, LogLevel desiredLogLevel) {
+		
+		if(logLevel.equals(LogLevel.NONE)) return;
+
+		if(logLevel.ordinal() >= desiredLogLevel.ordinal()) {
+			System.out.println(message);
 		}
 	}
 	

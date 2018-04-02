@@ -48,6 +48,7 @@ public class Peer implements RMITesting {
 	private ServiceChannel mdb;
 	private ServiceChannel mdr;
 	
+	private SystemDatabase database = new SystemDatabase();
 	private ConcurrentHashMap<String, ProtocolState> protocols = new ConcurrentHashMap<String, ProtocolState>(8, 0.9f, 1);
 	private ScheduledExecutorService executor = Executors.newScheduledThreadPool(executorThreadsMax);
 
@@ -131,14 +132,13 @@ public class Peer implements RMITesting {
 	    }
 	}
 	
-	// LATER update local database
+	// TODO update local database
 	@Override
 	public void remoteBackup(String filepath, int repDeg) throws IOException, NoSuchAlgorithmException, InterruptedException {
 		
 		executor.execute(new BackupProtocol(filepath, repDeg));
 	}
-	
-	// LATER update local database
+
 	@Override
 	public void remoteRestore(String filepath) throws IOException, NoSuchAlgorithmException, InterruptedException {
 		
@@ -157,7 +157,6 @@ public class Peer implements RMITesting {
 	}
 
 	// LATER delete enh use new ProtocolType
-	// LATER update local database
 	@Override
 	public void remoteDelete(String filepath) throws IOException, NoSuchAlgorithmException, InterruptedException {
 
@@ -177,11 +176,9 @@ public class Peer implements RMITesting {
 	}
 
 	@Override
-	public String remoteGetInfo() throws RemoteException {
+	public void remoteGetInfo() throws RemoteException {
 		
-		// LATER info protocol
-
-		return null;
+		executor.execute(new InfoProtocol());
 	}
 
 	/**
@@ -217,6 +214,13 @@ public class Peer implements RMITesting {
 	 */
 	public ServiceChannel getMdr() {
 		return mdr;
+	}
+
+	/**
+	 * @return the system database for this Peer
+	 */
+	public SystemDatabase getDatabase() {
+		return database;
 	}
 
 	/**

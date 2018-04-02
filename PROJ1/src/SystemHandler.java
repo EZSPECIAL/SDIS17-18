@@ -80,7 +80,7 @@ public class SystemHandler implements Runnable {
 		}
 	}
 	
-	// LATER update local database
+	// LATER backup enh update database according to whether chunk was stored or not
 	/**
 	 * Handles BACKUP protocol by writing the received chunk only if it doesn't exist already and then sending
 	 * a response STORED message. Doesn't write the chunk if the receiver and sender are the same.
@@ -106,7 +106,7 @@ public class SystemHandler implements Runnable {
 	    peer.createDirIfNotExists(storageFolder);
 	    peer.createDirIfNotExists(peerFolder);
 	    peer.createDirIfNotExists(chunkFolder);
-	    
+
 	    // Write chunk data to file only if it doesn't already exist
 	    File file = new File(chunkPath);
 	    if(!file.exists()) {
@@ -117,6 +117,9 @@ public class SystemHandler implements Runnable {
 	    	
 			SystemManager.getInstance().logPrint("written: " + state.getFields()[Peer.hashI] + "." + state.getFields()[Peer.chunkNoI], SystemManager.LogLevel.NORMAL);
 	    } else SystemManager.getInstance().logPrint("chunk already stored", SystemManager.LogLevel.DEBUG);
+	    
+	    // Update local database
+	    peer.getDatabase().putchunkUpdate(state, bodyData.length);
 	    
 	    // Prepare the necessary fields for the response message
 	    state.initBackupResponseState(peer.getProtocolVersion(), state.getFields()[Peer.hashI], state.getFields()[Peer.chunkNoI]);
@@ -129,6 +132,7 @@ public class SystemHandler implements Runnable {
 	}
 	
 	// LATER backup enh use new protocol type to store STORED in non initiators
+	// TODO update local database
 	/**
 	 * Handles the responses to a BACKUP protocol by counting the unique STORED responses
 	 * up to the desired replication degree for this protocol instance.
@@ -166,7 +170,7 @@ public class SystemHandler implements Runnable {
 		if(responseCount >= desiredCount) currState.setStoredCountCorrect(true);
 	}
 
-	// LATER update local database
+	// TODO update local database
 	/**
 	 * Handles DELETE protocol by deleting all the chunks referring to this protocol's instance SHA256.
 	 * 
@@ -198,7 +202,6 @@ public class SystemHandler implements Runnable {
 	    SystemManager.getInstance().logPrint("deleted: " + state.getFields()[Peer.hashI], SystemManager.LogLevel.NORMAL);
 	}
 	
-	// LATER update local database
 	/**
 	 * Handles RESTORE protocol by checking local storage for requested SHA256 + chunkNo and sending
 	 * the CHUNK message if found.
@@ -229,7 +232,6 @@ public class SystemHandler implements Runnable {
 	    peer.getExecutor().schedule(new TimeoutHandler(state, ProtocolState.ProtocolType.RESTORE, this.channelName, protocolKey, chunkPath), waitTimeMS, TimeUnit.MILLISECONDS);
 	}
 	
-	// LATER update local database
 	/**
 	 * Handles the responses to a RESTORE protocol by passing along the chunk data received.
 	 * 

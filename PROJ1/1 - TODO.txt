@@ -127,7 +127,8 @@ If adding messages
 EXTRAS
 ---------------------
 
-    - sliding window for messages
+    - Channel queue messages and 1 thread for each queue processing
+    - PUTCHUNK sliding window
     - every protocol playing nice with each other (prevent same peer same protocol same file)
     - RMI over network, "//host/name" format
     - DELETE ENH: sync filelist

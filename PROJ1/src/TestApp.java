@@ -187,7 +187,7 @@ public class TestApp {
 	private static void runState() {
 		
 		try {
-			String result = remoteObj.remoteGetInfo();
+			remoteObj.remoteGetInfo();
 		} catch(RemoteException e) {
 			System.out.println("TestApp: exception executing remote reclaim " + e.toString());
 			e.printStackTrace();
