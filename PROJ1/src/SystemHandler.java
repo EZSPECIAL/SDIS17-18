@@ -99,9 +99,11 @@ public class SystemHandler implements Runnable {
 	    }
 		
 	    // Create file structure for this chunk
-		String peerFolder = "./" + Peer.peerFolderPrefix + peer.getPeerID() + Peer.peerFolderSuffix;
+	    String storageFolder = "../" + Peer.storageFolderName;
+		String peerFolder = storageFolder + "/" + Peer.peerFolderPrefix + peer.getPeerID();
 	    String chunkFolder = peerFolder + "/" + state.getFields()[Peer.hashI];
 	    String chunkPath = chunkFolder + "/" + state.getFields()[Peer.chunkNoI];
+	    peer.createDirIfNotExists(storageFolder);
 	    peer.createDirIfNotExists(peerFolder);
 	    peer.createDirIfNotExists(chunkFolder);
 	    
@@ -174,7 +176,7 @@ public class SystemHandler implements Runnable {
 	private void handleDelete(Peer peer, ProtocolState state) {
 		
 	    // Open chunk folder for this hash and verify that it exists
-		String peerFolder = "./" + Peer.peerFolderPrefix + peer.getPeerID() + Peer.peerFolderSuffix;
+		String peerFolder = "../" + Peer.storageFolderName + "/" + Peer.peerFolderPrefix + peer.getPeerID();
 	    String chunkFolder = peerFolder + "/" + state.getFields()[Peer.hashI];
 	    
 	    File folder = new File(chunkFolder);
@@ -207,7 +209,7 @@ public class SystemHandler implements Runnable {
 	private void handleGetchunk(Peer peer, ProtocolState state) throws IOException, InterruptedException {
 		
 	    // Construct relevant chunk path and verify that it exists in this Peer's storage
-		String chunkPath = "./" + Peer.peerFolderPrefix + peer.getPeerID() + Peer.peerFolderSuffix + "/" + state.getFields()[Peer.hashI] + "/" + state.getFields()[Peer.chunkNoI];
+		String chunkPath = "../" + Peer.storageFolderName + "/" + Peer.peerFolderPrefix + peer.getPeerID() + "/" + state.getFields()[Peer.hashI] + "/" + state.getFields()[Peer.chunkNoI];
 
 	    File chunk = new File(chunkPath);
 	    if(!chunk.exists()) {

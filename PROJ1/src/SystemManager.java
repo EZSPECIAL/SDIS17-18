@@ -48,11 +48,7 @@ public class SystemManager {
 	 */
 	public void initLog(LogLevel logLevel, LogMethod logMethod) {
 		
-		// Create log file directory if it doesn't exist
-	    File directory = new File(logFolder);
-	    if(!directory.exists()) {
-	        directory.mkdir();
-	    }
+		Peer.getInstance().createDirIfNotExists("../" + logFolder);
 	    
 	    SystemManager.logLevel = logLevel;
 	    SystemManager.logMethod = logMethod;
@@ -90,8 +86,10 @@ public class SystemManager {
 		if(logMethod.equals(LogMethod.CONSOLE)) return;
 		if(logLevel.ordinal() < desiredLogLevel.ordinal()) return;
 		
+		Peer.getInstance().createDirIfNotExists("../" + logFolder);
+		
 		// Create path for log file
-		String filepath = "./" + logFolder + "/" + logPrefix + SystemManager.peerID + ".txt";
+		String filepath = "../" + logFolder + "/" + logPrefix + SystemManager.peerID + ".txt";
 		File toCreate = new File(filepath);
 		Path toWrite = Paths.get(filepath);
 

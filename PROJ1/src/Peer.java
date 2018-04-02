@@ -21,10 +21,10 @@ public class Peer implements RMITesting {
 	public static final int maxResponseWaitMS = 400;
 	public static final int consecutiveMsgWaitMS = 50;
 
+	public static final String storageFolderName = "Storage";
 	public static final String peerFolderPrefix = "Peer_";
-	public static final String peerFolderSuffix = "_Area";
 	public static final String restoredFolderName = "Restored";
-	public static final String restoredPrefix = "_restoredBy";
+	public static final String restoredSuffix = "_restoredBy";
 	
 	// Public header indices
 	public static final int protocolI = 0;

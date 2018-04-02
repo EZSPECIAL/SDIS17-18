@@ -2,8 +2,7 @@
 ORDER
 ---------------------
 
-    - rework repo structure / add shell scripts
-    - swap to linux (console buffer problem solved?)
+    - bash scripts (console buffer problem solved?)
     - reclaim
     - enh backup
     - enh restore

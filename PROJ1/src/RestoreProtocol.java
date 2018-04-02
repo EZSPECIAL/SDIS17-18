@@ -124,21 +124,21 @@ public class RestoreProtocol implements Runnable {
 		} while(chunks.size() != state.getChunkTotal());
 
 		// Create filepaths for restored file
-		String folderPath = "./" + Peer.restoredFolderName;
+		String folderPath = "../" + Peer.restoredFolderName;
 		String[] split = state.getFilename().split("[.]");
 		
 		String restoredFilepath;
 		if(split.length <= 1) {
-			restoredFilepath = folderPath + "/" + state.getFilename() + Peer.restoredPrefix + "_" + peer.getPeerID();
+			restoredFilepath = folderPath + "/" + state.getFilename() + Peer.restoredSuffix + "_" + peer.getPeerID();
 		} else {
-			split[split.length - 2] = split[split.length - 2] + Peer.restoredPrefix + "_" + peer.getPeerID();
+			split[split.length - 2] = split[split.length - 2] + Peer.restoredSuffix + "_" + peer.getPeerID();
 			restoredFilepath = folderPath + "/" + String.join(".", split);
 		}
 		
 		SystemManager.getInstance().logPrint("restoring file in \"" + restoredFilepath + "\"", SystemManager.LogLevel.DEBUG);
 		
 		// Append all binary data to form restored file
-		peer.createDirIfNotExists("./" + Peer.restoredFolderName);
+		peer.createDirIfNotExists(folderPath);
 
 		File chunk = new File(restoredFilepath);
 		FileOutputStream output = new FileOutputStream(chunk, true);
