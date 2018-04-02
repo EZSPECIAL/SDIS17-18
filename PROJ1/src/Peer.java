@@ -142,10 +142,11 @@ public class Peer implements RMITesting {
 	@Override
 	public void remoteRestore(String filepath) throws IOException, NoSuchAlgorithmException, InterruptedException {
 		
+		Thread.currentThread().setName("Restore " + Thread.currentThread().getId());
+		
 		ProtocolState state = new ProtocolState(new ServiceMessage());
 		Long timeoutMS = state.getTotalChunks(filepath) * baseRestoreTimeoutMS;
-		
-		Thread.currentThread().setName("Restore " + Thread.currentThread().getId());
+
 		SystemManager.getInstance().logPrint("restore timeout: " + timeoutMS + "ms", SystemManager.LogLevel.VERBOSE);
 		
 		Future<?> handler = executor.submit(new RestoreProtocol(filepath));

@@ -2,7 +2,6 @@
 ORDER
 ---------------------
 
-    - bash scripts (console buffer problem solved?)
     - reclaim
     - enh backup
     - enh restore
@@ -131,5 +130,4 @@ EXTRAS
     - sliding window for messages
     - every protocol playing nice with each other (prevent same peer same protocol same file)
     - RMI over network, "//host/name" format
-    - RESTORE: same filename restore on same peer but different filepath (overwrites restored file - use date?)
     - DELETE ENH: sync filelist
