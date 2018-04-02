@@ -2,8 +2,9 @@
 ORDER
 ---------------------
 
-    - version 4 threading
-    - abort CHUNK message
+    - abort duplicate CHUNK message
+    - catch syntax
+    - version 5 threading
     - swap to linux (console buffer problem solved?)
     - reclaim
     - enh backup
@@ -14,6 +15,7 @@ ORDER
     - concurrentlinkedqueue -> channels send here
     - ConcurrentHashMap(8, 0.9f, 1);
     - Serializable needed on all DB objects
+    - System.setProperty("java.net.preferIPv4Stack", "true")
 
 ---------------------
 GRADE
@@ -28,11 +30,6 @@ GRADE
 ---------------------
 THREADING
 ---------------------
-
-Version 4
-
-    - receiver threads now use worker threads for processing so that they can keep listening
-    - java.util.concurrent.ThreadPoolExecutor
 
 Version 5
 
@@ -64,7 +61,7 @@ Restore
     - MC -> GETCHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
     - save file with _restore appended "file_restored.png" or "file_restored" if no extension
     - save in same filepath as original file or a "restored" folder
-    
+
     Peers (that have the file-chunk)
     - MDR -> CHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF><Body>
     - random delay between 0 and 400ms
@@ -84,16 +81,13 @@ Reclaim
 DELIVERY & DEMO
 ---------------------
 
-Redmine
-    - deliver on redmine with requested instructions
-
 Report
     - 1 page per enhancement (backup, restore, delete)
     - 2-3 pages for concurrency model
 
 Setup
     - scripts for quick testing
-    - put pdf/png images on repository for testing during demo
+    - check svn command for checkout
     - test PCs in lab, local and remote
 
 ---------------------
@@ -139,7 +133,7 @@ Restore (using TCP)
     - getOutputStream() PrintWriter -> println()
     - ObjectInputStream() implements Serializable
     - ObjectOutputStream() implements Serializable
-    
+
     - multiple clients
 
 Delete
@@ -157,7 +151,6 @@ EXTRAS
 
     - sliding window for messages
     - every protocol playing nice with each other (prevent same peer same protocol same file)
-    - monitor file system changes, eg deletion (unconfirmed)
     - RMI over network, "//host/name" format
-    - RESTORE: same filename restore on same peer but different filepath (overwrites restored file)
+    - RESTORE: same filename restore on same peer but different filepath (overwrites restored file - use date?)
     - DELETE ENH: sync filelist

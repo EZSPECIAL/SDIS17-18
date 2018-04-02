@@ -27,8 +27,6 @@ public class StartPeer {
 	 * @param args 8.  logging method
 	 */
 	public static void main(String[] args) {
-
-		//System.setProperty("java.net.preferIPv4Stack", "true"); ASK needed?
 		parseArguments(args);
 	}
 	

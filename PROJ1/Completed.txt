@@ -102,3 +102,8 @@ Version 3
     - multiple multicaster instances on any Peer, handle 1 protocol
     - one thread per channel
     - java.util.concurrent.ConcurrentHashMap to store protocol state instances
+
+Version 4
+
+    - receiver threads now use worker threads for processing so that they can keep listening
+    - java.util.concurrent.ThreadPoolExecutor

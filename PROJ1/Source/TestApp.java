@@ -186,12 +186,12 @@ public class TestApp {
 	 */
 	private static void runState() {
 		
-//		try {
-//			String result = remoteObj.remoteGetInfo(); // TODO handle result
-//		} catch(RemoteException e) {
-//			System.out.println("TestApp: exception executing remote reclaim " + e.toString());
-//			e.printStackTrace();
-//		}
+		try {
+			String result = remoteObj.remoteGetInfo();
+		} catch(RemoteException e) {
+			System.out.println("TestApp: exception executing remote reclaim " + e.toString());
+			e.printStackTrace();
+		}
 	}
 	
 	/**

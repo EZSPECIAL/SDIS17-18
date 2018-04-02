@@ -9,6 +9,11 @@ public class RestoreProtocol implements Runnable {
 
 	private String filepath;
 	
+	/**
+	 * Runs a RESTORE protocol procedure with specified filepath.
+	 * 
+	 * @param filepath the file path to restore
+	 */
 	public RestoreProtocol(String filepath) {
 		this.filepath = filepath;
 	}
@@ -30,7 +35,7 @@ public class RestoreProtocol implements Runnable {
 		} catch (NoSuchAlgorithmException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception on restore protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
-			Thread.currentThread().interrupt();
+			return;
 		}
 		
 		if(key == null) {
@@ -50,6 +55,8 @@ public class RestoreProtocol implements Runnable {
 		} catch (InterruptedException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception or thread interruption on restore protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
+			peer.getProtocols().remove(key);
+			SystemManager.getInstance().logPrint("key removed: " + key, SystemManager.LogLevel.VERBOSE);
 			return;
 		}
 
@@ -57,7 +64,12 @@ public class RestoreProtocol implements Runnable {
 		SystemManager.getInstance().logPrint("key removed: " + key, SystemManager.LogLevel.VERBOSE);
 	}
 
-	// DOC
+	/**
+	 * Initialises the ProtocolState object relevant to this restore procedure.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @return whether initialisation was successful
+	 */
 	private String initializeProtocolInstance(Peer peer) throws NoSuchAlgorithmException, IOException {
 		
 		ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.RESTORE, new ServiceMessage());
@@ -71,7 +83,14 @@ public class RestoreProtocol implements Runnable {
 		return protocolKey;
 	}
 	
-	// DOC
+	/**
+	 * Sends the required GETCHUNK messages for backing up a file and then waits on reception of all
+	 * the relevant CHUNK messages.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @param state the Protocol State object relevant to this operation
+	 * @return whether the restore was successful
+	 */
 	private boolean getchunkLoop(Peer peer, ProtocolState state) throws IOException, InterruptedException {
 		
 		while(!state.isFinished()) {
@@ -80,7 +99,7 @@ public class RestoreProtocol implements Runnable {
 			byte[] msg = state.getParser().createGetchunkMsg(peer.getPeerID(), state);
 			peer.getMcc().send(msg);
 
-			Thread.sleep(Peer.restoreWaitMS); // LATER reduce this after worker threads implementation
+			Thread.sleep(Peer.consecutiveMsgWaitMS);
 			state.incrementCurrentChunkNo();
 		}
 		
@@ -91,12 +110,13 @@ public class RestoreProtocol implements Runnable {
 	/**
 	 * Writes a set of chunk data to a single file. The file path is fixed and is based on the filename and PeerID.
 	 * 
+	 * @param peer the singleton Peer instance
 	 * @param state the Protocol State object relevant to this operation
-	 * @return whether the operation was successful
+	 * @return whether the restore was successful
 	 */
 	private boolean writeRestoredChunks(Peer peer, ProtocolState state) throws IOException {
 		
-		// Check that all chunks were received
+		// Check that all chunks were received or abort if scheduled timeout happened
 		ConcurrentHashMap<Long, byte[]> chunks;
 		do {
 			if(Thread.interrupted()) return false;

@@ -5,7 +5,11 @@ public class DeleteProtocol implements Runnable {
 
 	private String filepath;
 	
-	// DOC
+	/**
+	 * Runs a DELETE protocol procedure with specified filepath.
+	 * 
+	 * @param filepath the file path to delete
+	 */
 	public DeleteProtocol(String filepath) {
 		this.filepath = filepath;
 	}
@@ -27,7 +31,7 @@ public class DeleteProtocol implements Runnable {
 		} catch (NoSuchAlgorithmException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception on delete protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
-			Thread.currentThread().interrupt();
+			return;
 		}
 		
 		// Create and send DELETE message 3 times
@@ -35,14 +39,14 @@ public class DeleteProtocol implements Runnable {
 		
 		try {
 			peer.getMcc().send(msg);
-			Thread.sleep(Peer.deleteWaitMS);
+			Thread.sleep(Peer.consecutiveMsgWaitMS);
 			peer.getMcc().send(msg);
-			Thread.sleep(Peer.deleteWaitMS);
+			Thread.sleep(Peer.consecutiveMsgWaitMS);
 			peer.getMcc().send(msg);
 		} catch (InterruptedException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception or thread interruption on delete protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
-			Thread.currentThread().interrupt();
+			return;
 		}
 		
 		SystemManager.getInstance().logPrint("finished " + delMsg, SystemManager.LogLevel.NORMAL);

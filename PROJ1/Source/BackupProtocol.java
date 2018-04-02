@@ -6,7 +6,12 @@ public class BackupProtocol implements Runnable {
 	private String filepath;
 	private int repDeg;
 	
-	// DOC
+	/**
+	 * Runs a BACKUP protocol procedure with specified filepath and replication degree.
+	 * 
+	 * @param filepath the file path to backup
+	 * @param repDeg desired replication degree
+	 */
 	public BackupProtocol(String filepath, int repDeg) {
 		this.filepath = filepath;
 		this.repDeg = repDeg;
@@ -26,10 +31,10 @@ public class BackupProtocol implements Runnable {
 		String key = null;
 		try {
 			key = this.initializeProtocolInstance(peer);
-		} catch (NoSuchAlgorithmException | IOException e) {
+		} catch(NoSuchAlgorithmException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception on backup protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
-			Thread.currentThread().interrupt();
+			return;
 		}
 		
 		if(key == null) {
@@ -46,14 +51,21 @@ public class BackupProtocol implements Runnable {
 		} catch (InterruptedException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception or thread interruption on backup protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
-			Thread.currentThread().interrupt();
+			peer.getProtocols().remove(key);
+			SystemManager.getInstance().logPrint("key removed: " + key, SystemManager.LogLevel.VERBOSE);
+			return;
 		}
 		
 		peer.getProtocols().remove(key);
 		SystemManager.getInstance().logPrint("key removed: " + key, SystemManager.LogLevel.VERBOSE);
 	}
 	
-	// DOC
+	/**
+	 * Initialises the ProtocolState object relevant to this backup procedure.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @return whether initialisation was successful
+	 */
 	private String initializeProtocolInstance(Peer peer) throws NoSuchAlgorithmException, IOException {
 		
 		ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.BACKUP, new ServiceMessage());
@@ -66,8 +78,15 @@ public class BackupProtocol implements Runnable {
 		SystemManager.getInstance().logPrint("key inserted: " + protocolKey, SystemManager.LogLevel.VERBOSE);
 		return protocolKey;
 	}
-	
-	// DOC
+
+	/**
+	 * Sends the required PUTCHUNK messages for backing up a file and waits for the reception of repDeg STORED
+	 * messages in response to each PUTCHUNK.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @param state the Protocol State object relevant to this operation
+	 * @return whether the backup was successful
+	 */
 	private boolean putchunkLoop(Peer peer, ProtocolState state) throws InterruptedException, IOException {
 		
 		while(state.getAttempts() < Peer.maxAttempts) {
