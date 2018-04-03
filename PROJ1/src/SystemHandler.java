@@ -1,5 +1,4 @@
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.util.concurrent.ThreadLocalRandom;
@@ -85,8 +84,7 @@ public class SystemHandler implements Runnable {
 			break;
 		}
 	}
-	
-	// LATER backup enh update database according to whether chunk was stored or not
+
 	/**
 	 * Handles BACKUP protocol by writing the received chunk only if it doesn't exist already and then sending
 	 * a response STORED message. Doesn't write the chunk if the receiver and sender are the same.
@@ -96,57 +94,19 @@ public class SystemHandler implements Runnable {
 	 */
 	private void handlePutchunk(Peer peer, ProtocolState state) throws IOException, InterruptedException {
 
-		byte[] bodyData = state.getParser().stripBody(state.getPacket());
-		
 	    // Check if this Peer is the Peer that requested the backup
 	    if(Integer.parseInt(state.getFields()[Peer.senderI]) == peer.getPeerID()) {
 	    	SystemManager.getInstance().logPrint("own PUTCHUNK, ignoring", SystemManager.LogLevel.DEBUG);
 	    	return;
 	    }
-		
-		// Check if a RECLAIM for this PUTCHUNK exists and if so set PUTCHUNK already sent flag
-	    String chunkKey = peer.getPeerID() + state.getFields()[Peer.hashI] + state.getFields()[Peer.chunkNoI] + ProtocolState.ProtocolType.RECLAIM.name();
-	    ProtocolState chunkState = peer.getProtocols().get(chunkKey);
-	    
-	    if(chunkState != null) {
-	    	chunkState.setPutchunkMsgAlreadySent(true);
-	    } else SystemManager.getInstance().logPrint("received PUTCHUNK but no RECLAIM protocol matched, key: " + chunkKey, SystemManager.LogLevel.VERBOSE);
-	    
-	    // Create file structure for this chunk
-	    String storageFolder = "../" + Peer.storageFolderName;
-		String peerFolder = storageFolder + "/" + Peer.peerFolderPrefix + peer.getPeerID();
-	    String chunkFolder = peerFolder + "/" + state.getFields()[Peer.hashI];
-	    String chunkPath = chunkFolder + "/" + state.getFields()[Peer.chunkNoI];
-	    peer.createDirIfNotExists(storageFolder);
-	    peer.createDirIfNotExists(peerFolder);
-	    peer.createDirIfNotExists(chunkFolder);
 
-	    // Write chunk data to file only if it doesn't already exist
-	    File file = new File(chunkPath);
-	    if(!file.exists()) {
-	    	
-	    	FileOutputStream output = new FileOutputStream(file);
-	    	output.write(bodyData);
-	    	output.close();
-	    	
-			SystemManager.getInstance().logPrint("written: " + state.getFields()[Peer.hashI] + "." + state.getFields()[Peer.chunkNoI], SystemManager.LogLevel.NORMAL);
-	    } else SystemManager.getInstance().logPrint("chunk already stored", SystemManager.LogLevel.DEBUG);
-	    
-	    // Update local database
-	    peer.getDatabase().putchunkUpdate(state, bodyData.length);
-	    peer.getExecutor().execute(new ReclaimProtocol());
-	    	    
-	    // Prepare the necessary fields for the response message
-	    state.initBackupResponseState(peer.getProtocolVersion(), state.getFields()[Peer.hashI], state.getFields()[Peer.chunkNoI]);
-	    
 	    // Wait a random millisecond delay from a previously specified range and then send the message
 	    int waitTimeMS = ThreadLocalRandom.current().nextInt(Peer.minResponseWaitMS, Peer.maxResponseWaitMS + 1);
 	    SystemManager.getInstance().logPrint("waiting " + waitTimeMS + "ms", SystemManager.LogLevel.DEBUG);
 
 	    peer.getExecutor().schedule(new TimeoutHandler(state, ProtocolState.ProtocolType.BACKUP, this.channelName), waitTimeMS, TimeUnit.MILLISECONDS);
 	}
-	
-	// LATER backup enh use new protocol type to store STORED in non initiators
+
 	/**
 	 * Handles the responses to a BACKUP protocol by counting the unique STORED responses
 	 * up to the desired replication degree for this protocol instance.

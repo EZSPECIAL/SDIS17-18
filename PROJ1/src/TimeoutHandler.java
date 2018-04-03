@@ -1,4 +1,8 @@
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class TimeoutHandler implements Runnable {
 
@@ -116,8 +120,96 @@ public class TimeoutHandler implements Runnable {
 	 */
 	private void sendStoredMsg(Peer peer) throws IOException {
 		
-		byte[] msg = this.state.getParser().createStoredMsg(peer.getPeerID(), state);
+		// Check if desired replication degree has already been met if message is enhanced as well as Peer
+		if(!this.state.getFields()[Peer.protocolVersionI].equals("1.0") && !peer.getProtocolVersion().equals("1.0")) {
+			if(this.handleEnhancedBackup(peer, this.state)) {
+				SystemManager.getInstance().logPrint("ignoring PUTCHUNK since replication degree has been met", SystemManager.LogLevel.DEBUG);
+				return;
+			}
+		} else SystemManager.getInstance().logPrint("not running enhanced BACKUP as message and Peer were not both enhanced", SystemManager.LogLevel.DEBUG);
+	    
+	    byte[] bodyData = this.state.getParser().stripBody(this.state.getPacket());
+	    
+		// Check if a RECLAIM for this PUTCHUNK exists and if so set PUTCHUNK already sent flag
+	    String chunkKey = peer.getPeerID() + this.state.getFields()[Peer.hashI] + this.state.getFields()[Peer.chunkNoI] + ProtocolState.ProtocolType.RECLAIM.name();
+	    ProtocolState chunkState = peer.getProtocols().get(chunkKey);
+	    
+	    if(chunkState != null) {
+	    	chunkState.setPutchunkMsgAlreadySent(true);
+	    } else SystemManager.getInstance().logPrint("received PUTCHUNK but no RECLAIM protocol matched, key: " + chunkKey, SystemManager.LogLevel.VERBOSE);
+	    
+	    // Create file structure for this chunk
+	    String storageFolder = "../" + Peer.storageFolderName;
+		String peerFolder = storageFolder + "/" + Peer.peerFolderPrefix + peer.getPeerID();
+	    String chunkFolder = peerFolder + "/" + this.state.getFields()[Peer.hashI];
+	    String chunkPath = chunkFolder + "/" + this.state.getFields()[Peer.chunkNoI];
+	    peer.createDirIfNotExists(storageFolder);
+	    peer.createDirIfNotExists(peerFolder);
+	    peer.createDirIfNotExists(chunkFolder);
+
+	    // Write chunk data to file only if it doesn't already exist
+	    File file = new File(chunkPath);
+	    if(!file.exists()) {
+	    	
+	    	FileOutputStream output = new FileOutputStream(file);
+	    	output.write(bodyData);
+	    	output.close();
+	    	
+			SystemManager.getInstance().logPrint("written: " + this.state.getFields()[Peer.hashI] + "." + this.state.getFields()[Peer.chunkNoI], SystemManager.LogLevel.NORMAL);
+	    } else SystemManager.getInstance().logPrint("chunk already stored", SystemManager.LogLevel.DEBUG);
+	    
+	    // Update local database
+	    peer.getDatabase().putchunkUpdate(this.state, bodyData.length);
+	    peer.getExecutor().execute(new ReclaimProtocol());
+	    	    
+	    // Prepare the necessary fields for the response message
+	    this.state.initBackupResponseState(peer.getProtocolVersion(), this.state.getFields()[Peer.hashI], this.state.getFields()[Peer.chunkNoI]);
+	    
+	    // Wait a random millisecond delay from a previously specified range and then send the message
+	    int waitTimeMS = ThreadLocalRandom.current().nextInt(Peer.minResponseWaitMS, Peer.maxResponseWaitMS + 1);
+	    SystemManager.getInstance().logPrint("waiting " + waitTimeMS + "ms", SystemManager.LogLevel.DEBUG);
+		
+		byte[] msg = this.state.getParser().createStoredMsg(peer.getPeerID(), this.state);
 		peer.getMcc().send(msg);
+	}
+	
+	/**
+	 * Handles enhanced BACKUP protocol by checking if desired replication degree has
+	 * already been met by other Peers.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @param state the Protocol State object relevant to this operation
+	 * @return whether storing of chunk data should be aborted along with response message
+	 */
+	private boolean handleEnhancedBackup(Peer peer, ProtocolState state) {
+	    
+		String hashKey = state.getFields()[Peer.hashI];
+		int chunkHashkey = Integer.parseInt(state.getFields()[Peer.chunkNoI]);
+		
+		// Check that file hash exists
+		if(!peer.getDatabase().getChunks().containsKey(hashKey)) {
+			SystemManager.getInstance().logPrint("no data about " + hashKey, SystemManager.LogLevel.DATABASE);
+			return false;
+		}
+
+		ConcurrentHashMap<Integer, ChunkInfo> chunksInfo = peer.getDatabase().getChunks().get(hashKey);
+		
+		// Check that chunk exists
+		if(!chunksInfo.containsKey(chunkHashkey)) {
+	    	SystemManager.getInstance().logPrint("no data about " + hashKey + "." + chunkHashkey, SystemManager.LogLevel.DATABASE);
+	    	return false;
+		}
+		
+		ChunkInfo chunk = chunksInfo.get(chunkHashkey);
+		int desiredRepDeg = Integer.parseInt(state.getFields()[Peer.repDegI]);
+		int perceivedRepDeg = chunk.getPerceivedRepDeg().size();
+		
+		// Update desired repDeg of this chunk
+		chunk.setDesiredRepDeg(desiredRepDeg);
+		
+		SystemManager.getInstance().logPrint("perceived " + perceivedRepDeg + " chunk copies out of " + desiredRepDeg + " desired", SystemManager.LogLevel.DEBUG);
+		if(perceivedRepDeg >= desiredRepDeg) return true;
+		else return false;
 	}
 	
 	/**
