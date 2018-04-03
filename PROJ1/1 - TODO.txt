@@ -23,11 +23,6 @@ Setup
 ENHANCEMENTS
 ---------------------
 
-Backup
-
-    - ensure repDegre
-    - keep interoperability
-
 Restore (using TCP)
 
     - ServerSocket - start TCP connection

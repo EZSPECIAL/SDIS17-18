@@ -131,6 +131,15 @@ State
     Curr KB used / max KB possible
 
 ---------------------
+ENHANCEMENTS
+---------------------
+
+Backup
+
+    - ensure repDegre
+    - keep interoperability
+
+---------------------
 THREADING
 ---------------------
 
