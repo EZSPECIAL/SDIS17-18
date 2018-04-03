@@ -7,14 +7,8 @@ Version 6
     - I/O concurrency with java.nio.channels.AsynchronousFileChannel
 
 ---------------------
-DELIVERY & DEMO
+DEMO
 ---------------------
-
-Report
-
-    - 1 page per enhancement
-
-Setup
 
     - check svn command for checkout
     - test PCs in lab, local and remote
