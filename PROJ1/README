@@ -1,1 +1,38 @@
-TODO
+File structure from SVN must be maintained for optimal program functionality. The Peers create a personal
+storage area one level up from the "src" folder, restored files are saved in a "Restored" folder
+also one level up from the "src" folder. This also applies to text logs created automatically.
+
+Compiling is done by running the "CompileAndRMI.sh" script which also starts the RMI Registry.
+
+The system runs according to the handout with 2 new optional options for logging purposes, each
+logging level prints all the logs from the lower levels. Levels are in a left to right fashion in
+terms of value, DEBUG is recommended for checking system performance. The log method is best
+left on CONSOLE, the level of threads running and logging to file sometimes caused problems but
+doesn't seem to affect system operation.
+
+java StartPeer <version> <id> <accessPoint> <mcc> <mdb> <mdr> [<logLevel> <logMethod>]
+
+version     - 1.0 or 1.1
+id          - non zero positive
+accesspoint - remote object name (must be local in "name" format)
+mcc         - IP:port of multicast control channel
+mdb         - IP:port of multicast data backup channel
+mdr         - IP:port of multicast data restore channel
+logLevel    - NONE, NORMAL, SERVICE_MSG, DEBUG, DATABASE, VERBOSE
+logMethod   - CONSOLE, FILE, BOTH
+
+The test app also runs according to the handout and must be run locally with the Peer
+intended to be the initiator Peer.
+
+java TestApp <accessPoint> <protocol> <opnd1> <opnd2>
+
+accessPoint - remote object name (must be local in "name" format)
+protocol    - BACKUP, RESTORE, DELETE, RECLAIM, STATE
+opnd1       - pathname, max KB if RECLAIM, STATE has no operands
+opnd2       - repDeg if BACKUP
+
+Apart from these options there are also some convenience scripts for testing, which are:
+    - Peer1.sh, Peer2.sh, Peer3.sh and Peer4.sh run Peers with different logging levels, the access point is the same as the script, e.g. "Peer1"
+    - an assortment of TestApp calling scripts to test the Peers
+
+These scripts rely on the test files provided in the repository and the file structure therein.

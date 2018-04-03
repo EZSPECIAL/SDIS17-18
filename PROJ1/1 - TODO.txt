@@ -2,10 +2,12 @@
 ORDER
 ---------------------
 
-    - reclaim on putchunk?
     - enh backup
     - enh restore
     - enh delete
+    - update README if enhanced
+    - add scripts if enhanced
+    - add 1 page per enhancement to protocol.pdf
 
     - Serializable needed on all DB objects
     - edit msg: add a new header line / protocol version != 1.0
@@ -23,12 +25,10 @@ DELIVERY & DEMO
 ---------------------
 
 Report
-    - README with instructions
     - 1 page per enhancement (backup, restore, delete)
     - 2-3 pages for concurrency model
 
 Setup
-    - scripts for quick testing
     - check svn command for checkout
     - test PCs in lab, local and remote
 
