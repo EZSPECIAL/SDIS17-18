@@ -134,7 +134,8 @@ public class SystemHandler implements Runnable {
 	    
 	    // Update local database
 	    peer.getDatabase().putchunkUpdate(state, bodyData.length);
-	    
+	    peer.getExecutor().execute(new ReclaimProtocol());
+	    	    
 	    // Prepare the necessary fields for the response message
 	    state.initBackupResponseState(peer.getProtocolVersion(), state.getFields()[Peer.hashI], state.getFields()[Peer.chunkNoI]);
 	    

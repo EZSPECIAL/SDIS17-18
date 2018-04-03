@@ -184,7 +184,6 @@ public class Peer implements RMITesting {
 		}, timeoutMS, TimeUnit.MILLISECONDS);
 	}
 
-	// LATER delete enh use new ProtocolType
 	@Override
 	public void remoteDelete(String filepath) throws IOException, NoSuchAlgorithmException, InterruptedException {
 
