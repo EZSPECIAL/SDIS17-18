@@ -33,6 +33,9 @@ opnd2       - repDeg if BACKUP
 
 Apart from these options there are also some convenience scripts for testing, which are:
     - Peer1.sh, Peer2.sh, Peer3.sh and Peer4.sh run Peers with different logging levels, the access point is the same as the script, e.g. "Peer1"
+    - Peer1Enh.sh, Peer2Enh.sh, Peer3Enh.sh and Peer4Enh.sh run enhanced Peers, the access point remains the same, e.g. "Peer1"
     - an assortment of TestApp calling scripts to test the Peers
 
 These scripts rely on the test files provided in the repository and the file structure therein.
+To run an enhanced BACKUP protocol it is only needed to run the regular TestApp BACKUP command, it is the Peer version that determines
+the messages it sends and how it interprets them.
