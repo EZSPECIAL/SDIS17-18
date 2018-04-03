@@ -196,14 +196,15 @@ public class ProtocolState {
 	 * @param protocolVersion the backup system version
 	 * @param hash textual representation of the hexadecimal values of a SHA256
 	 * @param chunkNo the chunk number relevant to this response procedure
+	 * @param desiredRepDeg desired replication degree
 	 */
-	public void initReclaimState(String protocolVersion, String hash, String chunkNo, String filepath) {
+	public void initReclaimState(String protocolVersion, String hash, String chunkNo, String filepath, int desiredRepDeg) {
 		
 		this.protocolVersion = protocolVersion;
 		this.hashHex = hash;
 		this.currentChunkNo = Long.parseLong(chunkNo);
 		this.filepath = filepath;
-		this.desiredRepDeg = 1;
+		this.desiredRepDeg = desiredRepDeg;
 	}
 	
 	/**

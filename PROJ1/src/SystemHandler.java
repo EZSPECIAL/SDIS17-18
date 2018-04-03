@@ -303,7 +303,8 @@ public class SystemHandler implements Runnable {
 	    }
 	    
 	    // Update database
-	    if(!peer.getDatabase().removedUpdate(state)) return;
+	    int desiredRepDeg = peer.getDatabase().removedUpdate(state);
+	    if(desiredRepDeg < 0) return;
 	    
 	    // Wait a random millisecond delay from a previously specified range and then send the message
 	    int waitTimeMS = ThreadLocalRandom.current().nextInt(Peer.minResponseWaitMS, Peer.maxResponseWaitMS + 1);
@@ -315,6 +316,6 @@ public class SystemHandler implements Runnable {
 	    	SystemManager.getInstance().logPrint("key inserted: " + protocolKey, SystemManager.LogLevel.VERBOSE);
 	    }
 	    
-	    peer.getExecutor().schedule(new TimeoutHandler(state, ProtocolState.ProtocolType.RECLAIM, this.channelName, protocolKey), waitTimeMS, TimeUnit.MILLISECONDS);
+	    peer.getExecutor().schedule(new TimeoutHandler(state, ProtocolState.ProtocolType.RECLAIM, this.channelName, protocolKey, desiredRepDeg), waitTimeMS, TimeUnit.MILLISECONDS);
 	}
 }

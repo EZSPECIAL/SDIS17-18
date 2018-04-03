@@ -100,9 +100,9 @@ public class SystemDatabase {
 	 * from the perceived replication degree hash map.
 	 * 
 	 * @param state the Protocol State object relevant to this operation
-	 * @return whether a backup procedure for this chunk is needed
+	 * @return the desired replication degree for this chunk
 	 */
-	public boolean removedUpdate(ProtocolState state) {
+	public int removedUpdate(ProtocolState state) {
 		
 		String hashKey = state.getFields()[Peer.hashI];
 		int chunkKey = Integer.parseInt(state.getFields()[Peer.chunkNoI]);
@@ -110,7 +110,7 @@ public class SystemDatabase {
 		// Check that file hash exists
 		if(!this.chunks.containsKey(hashKey)) {
 	    	SystemManager.getInstance().logPrint("no data about " + hashKey, SystemManager.LogLevel.DATABASE);
-			return false;
+			return -1;
 		}
 
 		ConcurrentHashMap<Integer, ChunkInfo> chunksInfo = this.chunks.get(hashKey);
@@ -118,7 +118,7 @@ public class SystemDatabase {
 		// Check that chunk exists
 		if(!chunksInfo.containsKey(chunkKey)) {
 	    	SystemManager.getInstance().logPrint("no data about " + hashKey + "." + chunkKey, SystemManager.LogLevel.DATABASE);
-			return false;
+			return -1;
 		}
 		
 		ChunkInfo chunkInfo = chunksInfo.get(chunkKey);
@@ -131,13 +131,13 @@ public class SystemDatabase {
 	    
 		if(chunkInfo.getSize() < 0) {
 	    	SystemManager.getInstance().logPrint("no local copy of " + hashKey + "." + chunkKey, SystemManager.LogLevel.DEBUG);
-			return false;
+			return -1;
 		}
 	    
-	    if(size < chunkInfo.getDesiredRepDeg()) return true;
+	    if(size < chunkInfo.getDesiredRepDeg()) return chunkInfo.getDesiredRepDeg();
 	    else {
 	    	SystemManager.getInstance().logPrint("no backup needed for " + hashKey + "." + chunkKey, SystemManager.LogLevel.DEBUG);
-	    	return false;
+	    	return -1;
 	    }
 	}
 	

@@ -7,6 +7,7 @@ public class TimeoutHandler implements Runnable {
 	private String channelName;
 	private String stopKey;
 	private String chunkPath;
+	private int desiredRepDeg;
 	
 	/**
 	 * A timeout handler for STORED messages. A STORED message relative to the ProtocolState instance is sent after
@@ -30,12 +31,14 @@ public class TimeoutHandler implements Runnable {
 	 * @param type the protocol type
 	 * @param channelName the channel name
 	 * @param stopKey the key for the ProtocolState object handling unneeded PUTCHUNK messages
+	 * @param desiredRepDeg desired replication degree
 	 */
-	public TimeoutHandler(ProtocolState state, ProtocolState.ProtocolType type, String channelName, String stopKey) {
+	public TimeoutHandler(ProtocolState state, ProtocolState.ProtocolType type, String channelName, String stopKey, int desiredRepDeg) {
 		this.state = state;
 		this.type = type;
 		this.channelName = channelName;
 		this.stopKey = stopKey;
+		this.desiredRepDeg = desiredRepDeg;
 	}
 	
 	/**
@@ -170,7 +173,7 @@ public class TimeoutHandler implements Runnable {
 	    String chunkPath = chunkFolder + "/" + state.getFields()[Peer.chunkNoI];
 	    
 	    // Prepare the necessary fields for the response message and send it
-	    this.state.initReclaimState(peer.getProtocolVersion(), state.getFields()[Peer.hashI], state.getFields()[Peer.chunkNoI], chunkPath);
+	    this.state.initReclaimState(peer.getProtocolVersion(), state.getFields()[Peer.hashI], state.getFields()[Peer.chunkNoI], chunkPath, this.desiredRepDeg);
 	    byte[] msg = this.state.getParser().createReclaimMsg(peer.getPeerID(), state);
 	    peer.getMdb().send(msg);
 	}
