@@ -24,10 +24,6 @@ Version 6
 DELIVERY & DEMO
 ---------------------
 
-Report
-    - 1 page per enhancement (backup, restore, delete)
-    - 2-3 pages for concurrency model
-
 Setup
     - check svn command for checkout
     - test PCs in lab, local and remote
