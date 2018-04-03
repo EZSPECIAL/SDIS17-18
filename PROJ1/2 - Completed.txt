@@ -58,6 +58,18 @@ MULTICAST CHANNELS
     - created with IP:port pair through command line arguments
 
 ---------------------
+DATABASE & DISK
+---------------------
+
+    - max disk space and keep count of chunk disk space usage
+    - local database of everything in the system
+    - "STATE" protocol
+    - "A peer should also count the number of confirmation messages for each of the chunks it has stored and keep that
+    count in non-volatile memory. This information can be useful if the peer runs out of disk space: in that event,
+    the peer may try to free some space by evicting chunks whose actual replication degree is higher than the desired
+    replication degree."
+
+---------------------
 PROTOCOLS
 ---------------------
 
@@ -93,6 +105,29 @@ Restore
     - "To avoid flooding the host with CHUNK messages, each peer shall wait for a random time uniformly distributed
 between 0 and 400 ms, before sending the CHUNK message. If it receives a CHUNK message before that time expires,
 it will not send the CHUNK message."
+
+Reclaim
+
+    Initiator
+    - MC -> REMOVED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+    - Peers receiving this message that have the chunk update the local repDeg count
+    - If repDeg count is below desired for that chunk, starts Backup protocol with delay (0 to 400ms)
+    - If during 0 to 400ms delay a PUTCHUNK for the same chunk is received, abort
+
+State
+
+    For each file Peer has initiated backup of
+        - file pathname
+        - backup file service ID
+        - desired repDeg
+    For each chunk of the file
+        - id
+        - perceived repDeg
+    For each chunk it stores
+        - id
+        - size in KB
+        - perceived repDeg
+    Curr KB used / max KB possible
 
 ---------------------
 THREADING

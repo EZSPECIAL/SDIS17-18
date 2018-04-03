@@ -38,7 +38,7 @@ public interface RMITesting extends Remote {
 	 * 
 	 * @param maxKB max kilobytes (K = 1000) the Peer can use
 	 */
-	void remoteReclaim(int maxKB) throws RemoteException;
+	void remoteReclaim(long maxKB) throws RemoteException;
 	
 	/**
 	 * Peer sends all the state info to the Client.

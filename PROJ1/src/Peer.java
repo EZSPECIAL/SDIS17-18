@@ -45,7 +45,7 @@ public class Peer implements RMITesting {
 	private String protocolVersion;
 	private int peerID;
 	private String accessPoint;
-	private int maxDiskSpace = 5000;
+	private long maxDiskSpace = 5000;
 	
 	// Sockets for multicast channels
 	private ServiceChannel mcc;
@@ -137,9 +137,9 @@ public class Peer implements RMITesting {
 	}
 	
 	/**
-	 * Calculates the amount of bytes that the Peer storage area is using.
+	 * Calculates the amount of KB that the Peer storage area is using.
 	 * 
-	 * @return the amount of bytes being used by the Peer storage area
+	 * @return the amount of KB being used by the Peer storage area
 	 */
 	public long getUsedSpace() {
 		
@@ -158,7 +158,7 @@ public class Peer implements RMITesting {
 			return 0;
 		}
 		
-		return size;
+		return (long) (size / 1000);
 	}
 
 	@Override
@@ -192,15 +192,10 @@ public class Peer implements RMITesting {
 	}
 
 	@Override
-	public void remoteReclaim(int maxKB) throws RemoteException {
+	public void remoteReclaim(long maxKB) throws RemoteException {
 		
-		// LATER reclaim protocol
-
-		String reclMsg = "reclaim: " + maxKB;
-		SystemManager.getInstance().logPrint("started " + reclMsg, SystemManager.LogLevel.NORMAL);
-		SystemManager.getInstance().logPrint("finished " + reclMsg, SystemManager.LogLevel.NORMAL);
-		
-		return;
+		this.maxDiskSpace = maxKB;
+		executor.execute(new ReclaimProtocol());
 	}
 
 	@Override
@@ -224,9 +219,9 @@ public class Peer implements RMITesting {
 	}
 
 	/**
-	 * @return the maximum disk space for this Peer
+	 * @return the maximum disk space for this Peer in KB
 	 */
-	public int getMaxDiskSpace() {
+	public long getMaxDiskSpace() {
 		return maxDiskSpace;
 	}
 

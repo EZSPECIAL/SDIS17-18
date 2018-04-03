@@ -40,6 +40,7 @@ public class ProtocolState {
 	private HashSet<Integer> respondedID = new HashSet<Integer>();
 	private boolean isStoredCountCorrect = false;
 	private boolean isChunkMsgAlreadySent = false;
+	private boolean isPutchunkMsgAlreadySent = false;
 	private ConcurrentHashMap<Long, byte[]> restoredChunks = new ConcurrentHashMap<Long, byte[]>(8, 0.9f, 1);
 	
 	private boolean isFinished;
@@ -173,6 +174,36 @@ public class ProtocolState {
 		this.filepath = filepath;
 		this.hashHex = hash;
 		this.currentChunkNo = Long.parseLong(chunkNo);
+	}
+	
+	/**
+	 * Initialises the protocol state object for a removed procedure by setting the required fields.
+	 * 
+	 * @param protocolVersion the backup system version
+	 * @param hash textual representation of the hexadecimal values of a SHA256
+	 * @param chunkNo the chunk number relevant to this response procedure
+	 */
+	public void initRemovedState(String protocolVersion, String hash, String chunkNo) {
+		
+		this.protocolVersion = protocolVersion;
+		this.hashHex = hash;
+		this.currentChunkNo = Long.parseLong(chunkNo);
+	}
+	
+	/**
+	 * Initialises the protocol state object for a reclaim procedure by setting the required fields.
+	 * 
+	 * @param protocolVersion the backup system version
+	 * @param hash textual representation of the hexadecimal values of a SHA256
+	 * @param chunkNo the chunk number relevant to this response procedure
+	 */
+	public void initReclaimState(String protocolVersion, String hash, String chunkNo, String filepath) {
+		
+		this.protocolVersion = protocolVersion;
+		this.hashHex = hash;
+		this.currentChunkNo = Long.parseLong(chunkNo);
+		this.filepath = filepath;
+		this.desiredRepDeg = 1;
 	}
 	
 	/**
@@ -384,6 +415,13 @@ public class ProtocolState {
 	}
 
 	/**
+	 * @return whether a PUTCHUNK message was found for the same PUTCHUNK message that would've been sent
+	 */
+	public boolean isPutchunkMsgAlreadySent() {
+		return isPutchunkMsgAlreadySent;
+	}
+
+	/**
 	 * @return the hash map of currently stored chunks
 	 */
 	public ConcurrentHashMap<Long, byte[]> getRestoredChunks() {
@@ -409,6 +447,13 @@ public class ProtocolState {
 	 */
 	public void setChunkMsgAlreadySent(boolean isChunkMsgAlreadySent) {
 		this.isChunkMsgAlreadySent = isChunkMsgAlreadySent;
+	}
+	
+	/**
+	 * @param isPutchunkMsgAlreadySent whether a PUTCHUNK message was found for the same PUTCHUNK message that would've been sent
+	 */
+	public void setPutchunkMsgAlreadySent(boolean isPutchunkMsgAlreadySent) {
+		this.isPutchunkMsgAlreadySent = isPutchunkMsgAlreadySent;
 	}
 	
 	/**

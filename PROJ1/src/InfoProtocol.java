@@ -85,6 +85,6 @@ public class InfoProtocol implements Runnable {
 	private void printDiskUsage() {
 		
 		Peer peer = Peer.getInstance();
-		SystemManager.getInstance().simpleLog((peer.getUsedSpace() / 1000) + "KB used out of " + peer.getMaxDiskSpace() + "KB", SystemManager.LogLevel.NORMAL);
+		SystemManager.getInstance().simpleLog(peer.getUsedSpace() + "KB used out of " + peer.getMaxDiskSpace() + "KB", SystemManager.LogLevel.NORMAL);
 	}
 }

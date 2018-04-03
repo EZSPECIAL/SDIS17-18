@@ -25,7 +25,8 @@ public class SystemDatabase {
 		int repDeg = Integer.parseInt(state.getFields()[Peer.repDegI]);
 		if(chunksInfo.putIfAbsent(chunkKey, new ChunkInfo(hashKey + "." + chunkKey, repDeg, size)) != null) {
 			chunksInfo.get(chunkKey).setDesiredRepDeg(repDeg);
-	    	SystemManager.getInstance().logPrint("updated chunk \"" + hashKey + "." + chunkKey + "\" with new desired repDeg " + repDeg, SystemManager.LogLevel.DATABASE);
+			chunksInfo.get(chunkKey).setSize(size);
+	    	SystemManager.getInstance().logPrint("updated chunk \"" + hashKey + "." + chunkKey + "\" with new desired repDeg " + repDeg + " and " + size + "KB", SystemManager.LogLevel.DATABASE);
 	    	return;
 		}
     	SystemManager.getInstance().logPrint("new chunk \"" + hashKey + "." + chunkKey + "\" with desired repDeg " + repDeg + " and " + size + "KB", SystemManager.LogLevel.DATABASE);
@@ -92,6 +93,52 @@ public class SystemDatabase {
 			this.initiatedFiles.get(fileKey).setDesiredRepDeg(repDeg);
 			SystemManager.getInstance().logPrint("updated file \"" + fileKey + "\" with path " + filepath + " and desired repDeg " + repDeg, SystemManager.LogLevel.DATABASE);
 		} else SystemManager.getInstance().logPrint("new file \"" + fileKey + "\" with path " + filepath + " and desired repDeg " + repDeg, SystemManager.LogLevel.DATABASE);
+	}
+	
+	/**
+	 * Updates the database with the REMOVED message info. Removes the sender ID
+	 * from the perceived replication degree hash map.
+	 * 
+	 * @param state the Protocol State object relevant to this operation
+	 * @return whether a backup procedure for this chunk is needed
+	 */
+	public boolean removedUpdate(ProtocolState state) {
+		
+		String hashKey = state.getFields()[Peer.hashI];
+		int chunkKey = Integer.parseInt(state.getFields()[Peer.chunkNoI]);
+		
+		// Check that file hash exists
+		if(!this.chunks.containsKey(hashKey)) {
+	    	SystemManager.getInstance().logPrint("no data about " + hashKey, SystemManager.LogLevel.DATABASE);
+			return false;
+		}
+
+		ConcurrentHashMap<Integer, ChunkInfo> chunksInfo = this.chunks.get(hashKey);
+		
+		// Check that chunk exists
+		if(!chunksInfo.containsKey(chunkKey)) {
+	    	SystemManager.getInstance().logPrint("no data about " + hashKey + "." + chunkKey, SystemManager.LogLevel.DATABASE);
+			return false;
+		}
+		
+		ChunkInfo chunkInfo = chunksInfo.get(chunkKey);
+
+		// Update perceived replication degree
+		chunkInfo.getPerceivedRepDeg().remove(Integer.parseInt(state.getFields()[Peer.senderI]));
+		int size = chunkInfo.getPerceivedRepDeg().size();
+
+	    SystemManager.getInstance().logPrint("updated chunk \"" + hashKey + "." + chunkKey + "\" with new perceived repDeg " + size, SystemManager.LogLevel.DATABASE);
+	    
+		if(chunkInfo.getSize() < 0) {
+	    	SystemManager.getInstance().logPrint("no local copy of " + hashKey + "." + chunkKey, SystemManager.LogLevel.DEBUG);
+			return false;
+		}
+	    
+	    if(size < chunkInfo.getDesiredRepDeg()) return true;
+	    else {
+	    	SystemManager.getInstance().logPrint("no backup needed for " + hashKey + "." + chunkKey, SystemManager.LogLevel.DEBUG);
+	    	return false;
+	    }
 	}
 	
 	/**

@@ -2,26 +2,13 @@
 ORDER
 ---------------------
 
-    - reclaim
+    - reclaim on putchunk?
     - enh backup
     - enh restore
     - enh delete
-    - protocol version dependent behavior (1.0 base 1.1 enh)
 
-    - concurrentlinkedqueue -> channels send here
-    - ConcurrentHashMap(8, 0.9f, 1);
     - Serializable needed on all DB objects
-    - System.setProperty("java.net.preferIPv4Stack", "true")
-
----------------------
-GRADE
----------------------
-
-    - 70% (concurrent with all protocols)
-    - 15% - 5% per enhancement
-    - 5% - RMI
-    - 5% - concurrency model in report
-    - 5% - demo setup
+    - edit msg: add a new header line / protocol version != 1.0
 
 ---------------------
 THREADING
@@ -32,34 +19,11 @@ Version 6
     - I/O concurrency with java.nio.channels.AsynchronousFileChannel
 
 ---------------------
-DATABASE & DISK
----------------------
-
-    - max disk space and keep count of chunk disk space usage (start with 8MB)
-    - local database of everything in the system
-    - "STATE" protocol
-    - "A peer should also count the number of confirmation messages for each of the chunks it has stored and keep that
-    count in non-volatile memory. This information can be useful if the peer runs out of disk space: in that event,
-    the peer may try to free some space by evicting chunks whose actual replication degree is higher than the desired
-    replication degree."
-
----------------------
-PROTOCOLS
----------------------
-
-Reclaim
-
-    Initiator
-    - MC -> REMOVED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
-    - Peers receiving this message that have the chunk update the local repDeg count
-    - If repDeg count is below desired for that chunk, starts Backup protocol with delay (0 to 400ms)
-    - If during 0 to 400ms delay a PUTCHUNK for the same chunk is received, abort
-
----------------------
 DELIVERY & DEMO
 ---------------------
 
 Report
+    - README with instructions
     - 1 page per enhancement (backup, restore, delete)
     - 2-3 pages for concurrency model
 
@@ -69,24 +33,6 @@ Setup
     - test PCs in lab, local and remote
 
 ---------------------
-CLIENT
----------------------
-
-    Get info ->
-        For each file Peer has initiated backup of
-            - file pathname
-            - backup file service ID
-            - desired repDeg
-        For each chunk of the file
-            - id
-            - perceived repDeg
-        For each chunk it stores
-            - id
-            - size in KB
-            - perceived repDeg
-        Curr KB used / max KB possible
-
----------------------
 ENHANCEMENTS
 ---------------------
 
@@ -94,7 +40,6 @@ Backup
 
     - ensure repDegre
     - keep interoperability
-    - what if not enough peers or disk space on them?
 
 Restore (using TCP)
 
@@ -116,19 +61,13 @@ Restore (using TCP)
 
 Delete
 
-    - delete chunks even if Peer is currently offline
-
-If adding messages
-
-    - add a new header line
-    - change protocol version to 1.1+
+    - delete chunks even if Peer is currently offline (WAKEUP message, store database, sync database?)
 
 ---------------------
 EXTRAS
 ---------------------
 
-    - Channel queue messages and 1 thread for each queue processing
+    - Channel concurrentlinkedqueue for messages and 1 thread for each queue processing
     - PUTCHUNK sliding window
     - every protocol playing nice with each other (prevent same peer same protocol same file)
     - RMI over network, "//host/name" format
-    - DELETE ENH: sync filelist

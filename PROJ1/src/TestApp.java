@@ -171,7 +171,7 @@ public class TestApp {
 	 * 
 	 * @param maxKB max KB of disk space allowed for backing up files
 	 */
-	private static void runReclaim(int maxKB) {
+	private static void runReclaim(long maxKB) {
 		
 		try {
 			remoteObj.remoteReclaim(maxKB);
@@ -259,17 +259,17 @@ public class TestApp {
 	 * @param maxSpace max disk space allowed for backing up (in KB)
 	 * @return numeric value of max KB
 	 */
-	private static int parseMaxDiskSpace(String maxSpace) {
+	private static long parseMaxDiskSpace(String maxSpace) {
 		
-		int maxKB = 0;
+		long maxKB = 0;
 		
 		try {
-			maxKB = Integer.parseInt(maxSpace);
+			maxKB = Long.parseLong(maxSpace);
 		} catch(NumberFormatException e) {
-			printErrExit("max KB must be a number between 0 and MAX_INT!");
+			printErrExit("max KB must be a number between 0 and LONG_MAX!");
 		}
 		
-		if(maxKB < 0) printErrExit("max KB must be a number between 0 and MAX_INT!");
+		if(maxKB < 0) printErrExit("max KB must be a number between 0 and LONG_MAX!");
 		
 		return maxKB;
 	}

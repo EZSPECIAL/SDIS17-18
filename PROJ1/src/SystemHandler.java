@@ -77,6 +77,12 @@ public class SystemHandler implements Runnable {
 			
 			this.handleChunk(peer, state);
 			break;
+			
+		// RECLAIM protocol initiated
+		case "REMOVED":
+			
+			this.handleRemoved(peer, state);
+			break;
 		}
 	}
 	
@@ -98,6 +104,14 @@ public class SystemHandler implements Runnable {
 	    	return;
 	    }
 		
+		// Check if a RECLAIM for this PUTCHUNK exists and if so set PUTCHUNK already sent flag
+	    String chunkKey = peer.getPeerID() + state.getFields()[Peer.hashI] + state.getFields()[Peer.chunkNoI] + ProtocolState.ProtocolType.RECLAIM.name();
+	    ProtocolState chunkState = peer.getProtocols().get(chunkKey);
+	    
+	    if(chunkState != null) {
+	    	chunkState.setPutchunkMsgAlreadySent(true);
+	    } else SystemManager.getInstance().logPrint("received PUTCHUNK but no RECLAIM protocol matched, key: " + chunkKey, SystemManager.LogLevel.VERBOSE);
+	    
 	    // Create file structure for this chunk
 	    String storageFolder = "../" + Peer.storageFolderName;
 		String peerFolder = storageFolder + "/" + Peer.peerFolderPrefix + peer.getPeerID();
@@ -226,6 +240,7 @@ public class SystemHandler implements Runnable {
 	    	return;
 	    }
 	    
+	    // Create CHUNK_STOP protocol for stopping unneeded CHUNK messages
 	    String protocolKey = peer.getPeerID() + state.getFields()[Peer.hashI] + state.getFields()[Peer.chunkNoI] + ProtocolState.ProtocolType.CHUNK_STOP.name();
 	    if(peer.getProtocols().putIfAbsent(protocolKey, state) == null) {
 	    	SystemManager.getInstance().logPrint("key inserted: " + protocolKey, SystemManager.LogLevel.VERBOSE);
@@ -269,5 +284,36 @@ public class SystemHandler implements Runnable {
 		
 		SystemManager.getInstance().logPrint("restored chunk \"" + state.getFields()[Peer.hashI] + "." + chunkNo + "\"", SystemManager.LogLevel.DEBUG);
 		currState.getRestoredChunks().put(chunkNo, data);
+	}
+	
+	/**
+	 * Handles RECLAIM protocol by checking if replication degree falls below the desired one.
+	 * If so starts a PUTCHUNK to try and raise the replication degree for this chunk.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @param state the Protocol State object relevant to this operation
+	 */
+	private void handleRemoved(Peer peer, ProtocolState state) {
+		
+	    // Check if this Peer is the Peer that sent the message
+	    if(Integer.parseInt(state.getFields()[Peer.senderI]) == peer.getPeerID()) {
+	    	SystemManager.getInstance().logPrint("own REMOVED, ignoring", SystemManager.LogLevel.DEBUG);
+	    	return;
+	    }
+	    
+	    // Update database
+	    if(!peer.getDatabase().removedUpdate(state)) return;
+	    
+	    // Wait a random millisecond delay from a previously specified range and then send the message
+	    int waitTimeMS = ThreadLocalRandom.current().nextInt(Peer.minResponseWaitMS, Peer.maxResponseWaitMS + 1);
+	    SystemManager.getInstance().logPrint("waiting " + waitTimeMS + "ms", SystemManager.LogLevel.DEBUG);
+	    
+	    // Create RECLAIM protocol for stopping unneeded PUTCHUNK messages
+	    String protocolKey = peer.getPeerID() + state.getFields()[Peer.hashI] + state.getFields()[Peer.chunkNoI] + ProtocolState.ProtocolType.RECLAIM.name();
+	    if(peer.getProtocols().putIfAbsent(protocolKey, state) == null) {
+	    	SystemManager.getInstance().logPrint("key inserted: " + protocolKey, SystemManager.LogLevel.VERBOSE);
+	    }
+	    
+	    peer.getExecutor().schedule(new TimeoutHandler(state, ProtocolState.ProtocolType.RECLAIM, this.channelName, protocolKey), waitTimeMS, TimeUnit.MILLISECONDS);
 	}
 }

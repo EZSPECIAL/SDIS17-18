@@ -19,6 +19,7 @@ public class ServiceMessage {
 	private static final int deleteMinMsgLen = 4;
 	private static final int getchunkMinMsgLen = 5;
 	private static final int chunkMinMsgLen = 5;
+	private static final int removedMinMsgLen = 5;
 	
 	private static final int maxChunkNo = 1000000;
 	private static final int minRepDeg = 1;
@@ -129,6 +130,47 @@ public class ServiceMessage {
 	    // Merge header and body to single byte[]
 		String header = "CHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
 		
+        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
+		
+		if(nRead <= 0) return header.getBytes();
+		else return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
+	}
+	
+	/**
+	 * Returns a service message with the following format: "REMOVED &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt; &lt;ChunkNo&gt;".
+	 * 
+	 * @param peerID the numeric identifier of the sending Peer
+	 * @param state the Protocol State object relevant to this operation
+	 * @return the binary data representing the message
+	 */
+	public byte[] createRemovedMsg(int peerID, ProtocolState state) throws IOException {
+
+		String header = "REMOVED " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
+		
+        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
+		return header.getBytes();
+	}
+	
+	/**
+	 * Returns a service message with the following format: "PUTCHUNK &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt; &lt;ChunkNo&gt; &lt;ReplicationDegree&gt;".
+	 * Used for RECLAIM protocol to send own Peer chunk data instead of accessing original file.
+	 * 
+	 * @param peerID the numeric identifier of the sending Peer
+	 * @param state the Protocol State object relevant to this operation
+	 * @return the binary data representing the message
+	 */
+	public byte[] createReclaimMsg(int peerID, ProtocolState state) throws IOException {
+		
+		// Get binary file data
+	    byte[] buf = new byte[dataSize];
+		int nRead = this.getData(state.getFilepath(), 0, buf);
+		
+        String readMsg = "putchunk nRead: " + nRead;
+        SystemManager.getInstance().logPrint(readMsg, SystemManager.LogLevel.VERBOSE);
+	    
+	    // Merge header and body to single byte[]
+        String header = "PUTCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + " " + state.getDesiredRepDeg() + headerTermination;
+	    		
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
 		
 		if(nRead <= 0) return header.getBytes();
@@ -278,6 +320,13 @@ public class ServiceMessage {
 			if(!validateChunk(fields)) return false;
 			return true;
 			
+		// RECLAIM protocol message
+		case "REMOVED":
+			
+			if(!validateHeaderSize(fields.length, removedMinMsgLen, "REMOVED")) return false;
+			if(!validateRemoved(fields)) return false;
+			return true;
+			
 		// Unknown protocols
 		default:
 			SystemManager.getInstance().logPrint("unrecognized protocol, ignoring message...", SystemManager.LogLevel.DEBUG);
@@ -348,6 +397,20 @@ public class ServiceMessage {
 	 * @return whether the CHUNK message is valid
 	 */
 	private boolean validateChunk(String[] fields) {
+		
+		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI])
+				&& validateHash(fields[hashI]) && validateChunkNo(fields[backChunkNoI]);
+		
+		return validate;
+	}
+	
+	/**
+	 * Validates a REMOVED message and returns whether it's valid.
+	 * 
+	 * @param fields the header fields
+	 * @return whether the REMOVED message is valid
+	 */
+	private boolean validateRemoved(String[] fields) {
 		
 		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI])
 				&& validateHash(fields[hashI]) && validateChunkNo(fields[backChunkNoI]);
