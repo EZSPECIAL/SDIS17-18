@@ -8,7 +8,7 @@ public class InfoProtocol implements Runnable {
 	public void run() {
 		
 		Peer peer = Peer.getInstance();
-		ConcurrentHashMap<String, ChunkInfo> chunks = peer.getDatabase().getChunks();
+		ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> chunks = peer.getDatabase().getChunks();
 		ConcurrentHashMap<String, FileInfo> files = peer.getDatabase().getInitiatedFiles();
 		
 		this.printInitiated(files);
@@ -39,19 +39,22 @@ public class InfoProtocol implements Runnable {
 	 * 
 	 * @param chunks the map containing info about the currently stored chunks
 	 */
-	private void printStored(ConcurrentHashMap<String, ChunkInfo> chunks) {
+	private void printStored(ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> chunks) {
 		
-		for(Map.Entry<String, ChunkInfo> entry : chunks.entrySet()) {
+		for(Map.Entry<String, ConcurrentHashMap<Integer, ChunkInfo>> hashEntry : chunks.entrySet()) {
 			
-			ChunkInfo chunk = entry.getValue();
-			int size = chunk.getSize();
-			if(size < 0) continue;
-			
-			SystemManager.getInstance().simpleLog("STORED CHUNK", SystemManager.LogLevel.NORMAL);
-			SystemManager.getInstance().simpleLog("\tid: " + chunk.getId(), SystemManager.LogLevel.NORMAL);
-			SystemManager.getInstance().simpleLog("\tperceived repDeg: " + chunk.getPerceivedRepDeg().size(), SystemManager.LogLevel.NORMAL);
-			SystemManager.getInstance().simpleLog("\tdesired repDeg: " + chunk.getDesiredRepDeg(), SystemManager.LogLevel.NORMAL);
-			SystemManager.getInstance().simpleLog("\tsize: " + chunk.getSize() + "KB", SystemManager.LogLevel.NORMAL);
+			for(Map.Entry<Integer, ChunkInfo> chunkEntry : hashEntry.getValue().entrySet()) {
+				
+				ChunkInfo chunk = chunkEntry.getValue();
+				int size = chunk.getSize();
+				if(size < 0) continue;
+				
+				SystemManager.getInstance().simpleLog("STORED CHUNK", SystemManager.LogLevel.NORMAL);
+				SystemManager.getInstance().simpleLog("\tid: " + chunk.getId(), SystemManager.LogLevel.NORMAL);
+				SystemManager.getInstance().simpleLog("\tperceived repDeg: " + chunk.getPerceivedRepDeg().size(), SystemManager.LogLevel.NORMAL);
+				SystemManager.getInstance().simpleLog("\tdesired repDeg: " + chunk.getDesiredRepDeg(), SystemManager.LogLevel.NORMAL);
+				SystemManager.getInstance().simpleLog("\tsize: " + chunk.getSize() + "KB", SystemManager.LogLevel.NORMAL);
+			}
 		}
 	}
 	
@@ -60,17 +63,20 @@ public class InfoProtocol implements Runnable {
 	 * 
 	 * @param chunks the map containing info about the perceived system chunks
 	 */
-	private void printSystemChunks(ConcurrentHashMap<String, ChunkInfo> chunks) {
+	private void printSystemChunks(ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> chunks) {
 		
-		for(Map.Entry<String, ChunkInfo> entry : chunks.entrySet()) {
-			
-			ChunkInfo chunk = entry.getValue();
-			int size = chunk.getSize();
-			if(size >= 0) continue;
-			
-			SystemManager.getInstance().simpleLog("SYSTEM CHUNK", SystemManager.LogLevel.NORMAL);
-			SystemManager.getInstance().simpleLog("\tid: " + chunk.getId(), SystemManager.LogLevel.NORMAL);
-			SystemManager.getInstance().simpleLog("\tperceived repDeg: " + chunk.getPerceivedRepDeg().size(), SystemManager.LogLevel.NORMAL);
+		for(Map.Entry<String, ConcurrentHashMap<Integer, ChunkInfo>> hashEntry : chunks.entrySet()) {
+
+			for(Map.Entry<Integer, ChunkInfo> chunkEntry : hashEntry.getValue().entrySet()) {
+
+				ChunkInfo chunk = chunkEntry.getValue();
+				int size = chunk.getSize();
+				if(size >= 0) continue;
+
+				SystemManager.getInstance().simpleLog("SYSTEM CHUNK", SystemManager.LogLevel.NORMAL);
+				SystemManager.getInstance().simpleLog("\tid: " + chunk.getId(), SystemManager.LogLevel.NORMAL);
+				SystemManager.getInstance().simpleLog("\tperceived repDeg: " + chunk.getPerceivedRepDeg().size(), SystemManager.LogLevel.NORMAL);
+			}
 		}
 	}
 }

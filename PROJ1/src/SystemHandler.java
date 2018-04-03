@@ -172,7 +172,6 @@ public class SystemHandler implements Runnable {
 		if(responseCount >= desiredCount) currState.setStoredCountCorrect(true);
 	}
 
-	// TODO update local database
 	/**
 	 * Handles DELETE protocol by deleting all the chunks referring to this protocol's instance SHA256.
 	 * 
@@ -180,6 +179,9 @@ public class SystemHandler implements Runnable {
 	 * @param state the Protocol State object relevant to this operation
 	 */
 	private void handleDelete(Peer peer, ProtocolState state) {
+		
+	    //Update database
+	    peer.getDatabase().deleteUpdate(state);
 		
 	    // Open chunk folder for this hash and verify that it exists
 		String peerFolder = "../" + Peer.storageFolderName + "/" + Peer.peerFolderPrefix + peer.getPeerID();
@@ -203,8 +205,7 @@ public class SystemHandler implements Runnable {
 	    folder.delete();
 	    SystemManager.getInstance().logPrint("deleted: " + state.getFields()[Peer.hashI], SystemManager.LogLevel.NORMAL);
 	    
-	    //Update database
-	    peer.getDatabase().deleteUpdate(state);
+
 	}
 	
 	/**

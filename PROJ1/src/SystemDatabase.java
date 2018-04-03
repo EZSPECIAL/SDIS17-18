@@ -2,7 +2,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class SystemDatabase {
 
-	private ConcurrentHashMap<String, ChunkInfo> chunks = new ConcurrentHashMap<String, ChunkInfo>(8, 0.9f, 1);
+	private ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> chunks = new ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>>(8, 0.9f, 1);
 	private ConcurrentHashMap<String, FileInfo> initiatedFiles = new ConcurrentHashMap<String, FileInfo>(8, 0.9f, 1);
 
 	/**
@@ -15,37 +15,61 @@ public class SystemDatabase {
 	 */
 	public void putchunkUpdate(ProtocolState state, int size) {
 		
-		String key = state.getFields()[Peer.hashI] + "." + state.getFields()[Peer.chunkNoI];
+		String hashKey = state.getFields()[Peer.hashI];
+		int chunkKey = Integer.parseInt(state.getFields()[Peer.chunkNoI]);
+		
+		this.chunks.putIfAbsent(hashKey, new ConcurrentHashMap<Integer, ChunkInfo>(8, 0.9f, 1));
+		
+		ConcurrentHashMap<Integer, ChunkInfo> chunksInfo = this.chunks.get(hashKey);
+		
 		int repDeg = Integer.parseInt(state.getFields()[Peer.repDegI]);
-		if(this.chunks.putIfAbsent(key, new ChunkInfo(key, repDeg, size)) != null) {
-			this.chunks.get(key).setDesiredRepDeg(repDeg);
-	    	SystemManager.getInstance().logPrint("updated chunk \"" + key + "\" with new desired repDeg " + repDeg, SystemManager.LogLevel.DATABASE);
+		if(chunksInfo.putIfAbsent(chunkKey, new ChunkInfo(hashKey + "." + chunkKey, repDeg, size)) != null) {
+			chunksInfo.get(chunkKey).setDesiredRepDeg(repDeg);
+	    	SystemManager.getInstance().logPrint("updated chunk \"" + hashKey + "." + chunkKey + "\" with new desired repDeg " + repDeg, SystemManager.LogLevel.DATABASE);
 	    	return;
 		}
-    	SystemManager.getInstance().logPrint("new chunk \"" + key + "\" with desired repDeg " + repDeg + " and " + size + "KB", SystemManager.LogLevel.DATABASE);
+    	SystemManager.getInstance().logPrint("new chunk \"" + hashKey + "." + chunkKey + "\" with desired repDeg " + repDeg + " and " + size + "KB", SystemManager.LogLevel.DATABASE);
 	}
 	
-	// DOC
+	/**
+	 * Updates the database with the received STORED message info about a chunk.
+	 * Adds the sender ID to the perceived replication degree hash map.
+	 * 
+	 * @param state the Protocol State object relevant to this operation
+	 */
 	public void storedUpdate(ProtocolState state) {
 		
-		String key = state.getFields()[Peer.hashI] + "." + state.getFields()[Peer.chunkNoI];
+		String hashKey = state.getFields()[Peer.hashI];
+		int chunkKey = Integer.parseInt(state.getFields()[Peer.chunkNoI]);
 		
-		if(this.chunks.putIfAbsent(key, new ChunkInfo(key)) != null) {
-			this.chunks.get(key).getPerceivedRepDeg().put(Integer.parseInt(state.getFields()[Peer.senderI]), 0);
-	    	SystemManager.getInstance().logPrint("updated chunk \"" + key + "\" with new perceived repDeg " + this.chunks.get(key).getPerceivedRepDeg().size(), SystemManager.LogLevel.DATABASE);
+		this.chunks.putIfAbsent(hashKey, new ConcurrentHashMap<Integer, ChunkInfo>(8, 0.9f, 1));
+		
+		ConcurrentHashMap<Integer, ChunkInfo> chunksInfo = this.chunks.get(hashKey);
+		
+		if(chunksInfo.putIfAbsent(chunkKey, new ChunkInfo(hashKey + "." + chunkKey)) != null) {
+			chunksInfo.get(chunkKey).getPerceivedRepDeg().put(Integer.parseInt(state.getFields()[Peer.senderI]), 0);
+	    	SystemManager.getInstance().logPrint("updated chunk \"" + hashKey + "." + chunkKey + "\" with new perceived repDeg " + chunksInfo.get(chunkKey).getPerceivedRepDeg().size(), SystemManager.LogLevel.DATABASE);
 	    	return;
 		}
 		
-		this.chunks.get(key).getPerceivedRepDeg().put(Integer.parseInt(state.getFields()[Peer.senderI]), 0);
-    	SystemManager.getInstance().logPrint("new chunk \"" + key + "\" with perceived repDeg " + this.chunks.get(key).getPerceivedRepDeg().size(), SystemManager.LogLevel.DATABASE);
+		chunksInfo.get(chunkKey).getPerceivedRepDeg().put(Integer.parseInt(state.getFields()[Peer.senderI]), 0);
+    	SystemManager.getInstance().logPrint("new chunk \"" + hashKey + "." + chunkKey + "\" with perceived repDeg " + chunksInfo.get(chunkKey).getPerceivedRepDeg().size(), SystemManager.LogLevel.DATABASE);
 	}
 	
-	//DOC
+	/**
+	 * Removes all database info of the SHA256 from the initiated
+	 * backups database and from the chunks database.
+	 * 
+	 * @param state the Protocol State object relevant to this operation
+	 */
 	public void deleteUpdate(ProtocolState state) {
 		
-		String fileKey = state.getFields()[Peer.hashI];
+		String hashKey = state.getFields()[Peer.hashI];
+
+		this.initiatedFiles.remove(hashKey);
+		this.chunks.remove(hashKey);
 		
-		//this.initiatedFiles.remove(fileKey)
+    	SystemManager.getInstance().logPrint("removed hash " + hashKey, SystemManager.LogLevel.DATABASE);
 	}
 	
 	/**
@@ -71,16 +95,16 @@ public class SystemDatabase {
 	}
 	
 	/**
-	 * @return the hash map containing info about chunks in the system
+	 * @return the hash map of hash maps containing info about chunks in the system
 	 */
-	public ConcurrentHashMap<String, ChunkInfo> getChunks() {
+	public ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> getChunks() {
 		return chunks;
 	}
 
 	/**
-	 * @param chunks the hash map containing info about chunks in the system
+	 * @param chunks the hash map of hash maps containing info about chunks in the system
 	 */
-	public void setChunks(ConcurrentHashMap<String, ChunkInfo> chunks) {
+	public void setChunks(ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> chunks) {
 		this.chunks = chunks;
 	}
 
