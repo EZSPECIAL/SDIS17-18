@@ -1,6 +1,9 @@
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -42,6 +45,7 @@ public class Peer implements RMITesting {
 	private String protocolVersion;
 	private int peerID;
 	private String accessPoint;
+	private int maxDiskSpace = 5000;
 	
 	// Sockets for multicast channels
 	private ServiceChannel mcc;
@@ -131,6 +135,31 @@ public class Peer implements RMITesting {
 	        directory.mkdir();
 	    }
 	}
+	
+	/**
+	 * Calculates the amount of bytes that the Peer storage area is using.
+	 * 
+	 * @return the amount of bytes being used by the Peer storage area
+	 */
+	public long getUsedSpace() {
+		
+		String storageFolder = "../" + Peer.storageFolderName;
+		String peerFolder = storageFolder + "/" + Peer.peerFolderPrefix + this.peerID;
+		
+		Path folder = Paths.get(peerFolder);
+		
+		long size;
+		try {
+			size = Files.walk(folder)
+					.filter(p -> p.toFile().isFile())
+					.mapToLong(p -> p.toFile().length())
+					.sum();
+		} catch(IOException e) {
+			return 0;
+		}
+		
+		return size;
+	}
 
 	@Override
 	public void remoteBackup(String filepath, int repDeg) throws IOException, NoSuchAlgorithmException, InterruptedException {
@@ -192,6 +221,13 @@ public class Peer implements RMITesting {
 	 */
 	public int getPeerID() {
 		return peerID;
+	}
+
+	/**
+	 * @return the maximum disk space for this Peer
+	 */
+	public int getMaxDiskSpace() {
+		return maxDiskSpace;
 	}
 
 	/**

@@ -2,8 +2,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class InfoProtocol implements Runnable {
-	
-	// TODO print disk status
+
 	@Override
 	public void run() {
 		
@@ -14,7 +13,7 @@ public class InfoProtocol implements Runnable {
 		this.printInitiated(files);
 		this.printStored(chunks);
 		this.printSystemChunks(chunks);
-		//this.printDiskSpace();
+		this.printDiskUsage();
 	}
 	
 	/**
@@ -78,5 +77,14 @@ public class InfoProtocol implements Runnable {
 				SystemManager.getInstance().simpleLog("\tperceived repDeg: " + chunk.getPerceivedRepDeg().size(), SystemManager.LogLevel.NORMAL);
 			}
 		}
+	}
+	
+	/**
+	 * Prints the used disk space compared to the maximum disk space usage allowed.
+	 */
+	private void printDiskUsage() {
+		
+		Peer peer = Peer.getInstance();
+		SystemManager.getInstance().simpleLog((peer.getUsedSpace() / 1000) + "KB used out of " + peer.getMaxDiskSpace() + "KB", SystemManager.LogLevel.NORMAL);
 	}
 }
