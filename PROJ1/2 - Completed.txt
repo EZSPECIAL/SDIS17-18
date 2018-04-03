@@ -8,7 +8,7 @@ java StartPeer <version> <id> <accessPoint> <mcc> <mdb> <mdr> [<logLevel> <logMe
 
 version     - 1.0 or 1.1
 id          - non zero positive
-accesspoint - remote object name (must be local in "name" format)
+accesspoint - remote object name (must be in "//host/name" format)
 mcc         - IP:port of multicast control channel
 mdb         - IP:port of multicast data backup channel
 mdr         - IP:port of multicast data restore channel
@@ -17,7 +17,7 @@ logMethod   - CONSOLE, FILE, BOTH
 
 java TestApp <accessPoint> <protocol> <opnd1> <opnd2>
 
-accessPoint - remote object name (must be local in "name" format)
+accessPoint - remote object name (must be in "//host/name" format)
 protocol    - NONE, NORMAL, SERVICE_MSG, DEBUG, DATABASE, VERBOSE
 opnd1       - pathname, max KB if RECLAIM, STATE has no operands
 opnd2       - repDeg if BACKUP

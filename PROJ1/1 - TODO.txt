@@ -54,4 +54,3 @@ EXTRAS
     - Channel concurrentlinkedqueue for messages and 1 thread for each queue processing
     - PUTCHUNK sliding window
     - every protocol playing nice with each other (prevent same peer same protocol same file)
-    - RMI over network, "//host/name" format

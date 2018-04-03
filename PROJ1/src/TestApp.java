@@ -2,6 +2,7 @@ import java.io.File;
 import java.io.IOException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.rmi.UnknownHostException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.security.NoSuchAlgorithmException;
@@ -16,6 +17,8 @@ public class TestApp {
 	private static final int protocolI = 1;
 	private static final int opnd1I = 2;
 	private static final int opnd2I = 3;
+	private static final int hostI = 1;
+	private static final int remoteNameI = 2;
 	
 	private TestApp() {}
 
@@ -195,21 +198,37 @@ public class TestApp {
 	}
 	
 	/**
-	 * Looks up the RMI registry for a object matching the specified access point and returns it.
+	 * Looks up the RMI registry for a object matching the specified "//host/name" and returns it.
 	 * 
 	 * @param accessPoint RMI Object name
 	 * @return RMI Object to invoke methods of
 	 */
 	private static RMITesting getRMStub(String accessPoint) {
 
-		//String host = (args.length < 1) ? null : args[0]; // TODO RMI over network
+		// Validate that access point is in "//host/name" format
+		if(accessPoint.length() < 5) {
+			printErrExit("access point must be in \"//host/name\" format");
+		}
+		
+		if(accessPoint.charAt(0) != '/' || accessPoint.charAt(1) != '/') {
+			printErrExit("access point must be in \"//host/name\" format");
+		}
+		
+		String[] fields = accessPoint.split("[/]+");
+		
+		if(fields.length != 3) {
+			printErrExit("access point must be in \"//host/name\" format");
+		}
+		
 		try {
-			Registry registry = LocateRegistry.getRegistry();
-			RMITesting stub = (RMITesting) registry.lookup(accessPoint);
+			Registry registry = LocateRegistry.getRegistry(fields[hostI]);
+			RMITesting stub = (RMITesting) registry.lookup(fields[remoteNameI]);
 			return stub;
 
 		} catch(NotBoundException e) {
-			System.out.println("TestApp: \"" + accessPoint + "\" is not registered for RMI!");
+			System.out.println("TestApp: \"" + fields[remoteNameI] + "\" is not registered for RMI!");
+		} catch(UnknownHostException e) {
+			System.out.println("TestApp: \"" + fields[hostI] + "\" unknown host!");
 		} catch(Exception e) {
 			System.out.println("TestApp: exception looking up registry " + e.toString());
 			e.printStackTrace();
