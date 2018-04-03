@@ -1,11 +1,33 @@
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ChunkInfo {
 	
 	private String id;
 	private int desiredRepDeg;
-	private int perceivedRepDeg = 0;
+	private ConcurrentHashMap<Integer, Integer> perceivedRepDeg = new ConcurrentHashMap<Integer, Integer>(8, 0.9f, 1);
 	private int size = -1;
 
+	/**
+	 * Creates chunk info using specified parameters.
+	 * 
+	 * @param id the SHA256.chunkNo identifier
+	 */
+	public ChunkInfo(String id) {
+		this.id = id;
+		this.desiredRepDeg = 0;
+	}
+	
+	/**
+	 * Creates chunk info using specified parameters.
+	 * 
+	 * @param id the SHA256.chunkNo identifier
+	 * @param desiredRepDeg the desired replication degree
+	 */
+	public ChunkInfo(String id, int desiredRepDeg) {
+		this.id = id;
+		this.desiredRepDeg = desiredRepDeg;
+	}
+	
 	/**
 	 * Creates chunk info using specified parameters.
 	 * 
@@ -48,16 +70,16 @@ public class ChunkInfo {
 	}
 
 	/**
-	 * @return the perceived replication degree
+	 * @return the hash map containing the Peer IDs that have stored the chunk
 	 */
-	public int getPerceivedRepDeg() {
+	public  ConcurrentHashMap<Integer, Integer> getPerceivedRepDeg() {
 		return perceivedRepDeg;
 	}
 
 	/**
-	 * @param perceivedRepDeg the perceived replication degree to set
+	 * @param perceivedRepDeg the hash map containing the Peer IDs that have stored the chunk
 	 */
-	public void setPerceivedRepDeg(int perceivedRepDeg) {
+	public void setPerceivedRepDeg( ConcurrentHashMap<Integer, Integer> perceivedRepDeg) {
 		this.perceivedRepDeg = perceivedRepDeg;
 	}
 

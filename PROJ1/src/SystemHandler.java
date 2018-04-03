@@ -132,7 +132,6 @@ public class SystemHandler implements Runnable {
 	}
 	
 	// LATER backup enh use new protocol type to store STORED in non initiators
-	// TODO update local database
 	/**
 	 * Handles the responses to a BACKUP protocol by counting the unique STORED responses
 	 * up to the desired replication degree for this protocol instance.
@@ -141,6 +140,9 @@ public class SystemHandler implements Runnable {
 	 * @param state the Protocol State object relevant to this operation
 	 */
 	private void handleStored(Peer peer, ProtocolState state) {
+		
+		// Update database
+		peer.getDatabase().storedUpdate(state);
 		
 		// Check sender ID is different from this Peer's ID
 		if(Integer.parseInt(state.getFields()[Peer.senderI]) == peer.getPeerID()) {
@@ -200,6 +202,9 @@ public class SystemHandler implements Runnable {
 	    // Delete chunk folder
 	    folder.delete();
 	    SystemManager.getInstance().logPrint("deleted: " + state.getFields()[Peer.hashI], SystemManager.LogLevel.NORMAL);
+	    
+	    //Update database
+	    peer.getDatabase().deleteUpdate(state);
 	}
 	
 	/**

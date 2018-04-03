@@ -100,6 +100,10 @@ public class BackupProtocol implements Runnable {
 
 			// Check if expected unique STORED messages were received
 			if(state.isStoredCountCorrect()) {
+				
+				// Update database with initiated chunk
+				peer.getDatabase().backupUpdate(state);
+				
 				state.incrementCurrentChunkNo();
 				state.resetStoredCount();
 			} else {

@@ -131,8 +131,7 @@ public class Peer implements RMITesting {
 	        directory.mkdir();
 	    }
 	}
-	
-	// TODO update local database
+
 	@Override
 	public void remoteBackup(String filepath, int repDeg) throws IOException, NoSuchAlgorithmException, InterruptedException {
 		
