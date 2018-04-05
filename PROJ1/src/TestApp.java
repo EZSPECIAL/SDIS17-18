@@ -17,8 +17,11 @@ public class TestApp {
 	private static final int protocolI = 1;
 	private static final int opnd1I = 2;
 	private static final int opnd2I = 3;
-	private static final int hostI = 1;
-	private static final int remoteNameI = 2;
+	private static final int hostI = 0;
+	private static final int remoteNameI = 1;
+	private static final int splitHostI = 1;
+	private static final int splitRemoteNameI = 2;
+	private static final int minAccessLen = 5;
 	
 	private TestApp() {}
 
@@ -205,21 +208,8 @@ public class TestApp {
 	 */
 	private static RMITesting getRMStub(String accessPoint) {
 
-		// Validate that access point is in "//host/name" format
-		if(accessPoint.length() < 5) {
-			printErrExit("access point must be in \"//host/name\" format");
-		}
-		
-		if(accessPoint.charAt(0) != '/' || accessPoint.charAt(1) != '/') {
-			printErrExit("access point must be in \"//host/name\" format");
-		}
-		
-		String[] fields = accessPoint.split("[/]+");
-		
-		if(fields.length != 3) {
-			printErrExit("access point must be in \"//host/name\" format");
-		}
-		
+		String[] fields = getHostAndName(accessPoint);
+			
 		try {
 			Registry registry = LocateRegistry.getRegistry(fields[hostI]);
 			RMITesting stub = (RMITesting) registry.lookup(fields[remoteNameI]);
@@ -235,6 +225,34 @@ public class TestApp {
 		}
 
 		return null;
+	}
+	
+	/**
+	 * Parses the access point and returns it as a host / RMI object name
+	 * string array.
+	 * 
+	 * @param accessPoint RMI //host/name or name format for access point
+	 * @return string array of the host and RMI object name
+	 */
+	private static String[] getHostAndName(String accessPoint) {
+		
+		// RMI "name" format
+		if(accessPoint.length() < minAccessLen) {
+			return new String[] {"localhost", accessPoint};
+		}
+		
+		// RMI "//host/name" format
+		if(accessPoint.charAt(0) != '/' || accessPoint.charAt(1) != '/') {
+			return new String[] {"localhost", accessPoint};
+		}
+		
+		String[] fields = accessPoint.split("[/]+");
+		
+		if(fields.length != 3) {
+			return new String[] {"localhost", accessPoint};
+		}
+		
+		return new String[] {fields[splitHostI], fields[splitRemoteNameI]};
 	}
 	
 	/**

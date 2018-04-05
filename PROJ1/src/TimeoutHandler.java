@@ -2,7 +2,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class TimeoutHandler implements Runnable {
 
@@ -164,10 +163,6 @@ public class TimeoutHandler implements Runnable {
 	    	    
 	    // Prepare the necessary fields for the response message
 	    this.state.initBackupResponseState(peer.getProtocolVersion(), this.state.getFields()[Peer.hashI], this.state.getFields()[Peer.chunkNoI]);
-	    
-	    // Wait a random millisecond delay from a previously specified range and then send the message
-	    int waitTimeMS = ThreadLocalRandom.current().nextInt(Peer.minResponseWaitMS, Peer.maxResponseWaitMS + 1);
-	    SystemManager.getInstance().logPrint("waiting " + waitTimeMS + "ms", SystemManager.LogLevel.DEBUG);
 		
 		byte[] msg = this.state.getParser().createStoredMsg(peer.getPeerID(), this.state);
 		peer.getMcc().send(msg);
