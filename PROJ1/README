@@ -14,19 +14,19 @@ java StartPeer <version> <id> <accessPoint> <mcc> <mdb> <mdr> [<logLevel> <logMe
 
 version     - 1.0 or 1.1
 id          - non zero positive
-accesspoint - remote object name (must be in "//host/name" format)
+accesspoint - remote object name (must be in "//host/name" or "name" format)
 mcc         - IP:port of multicast control channel
 mdb         - IP:port of multicast data backup channel
 mdr         - IP:port of multicast data restore channel
 logLevel    - NONE, NORMAL, SERVICE_MSG, DEBUG, DATABASE, VERBOSE
 logMethod   - CONSOLE, FILE, BOTH
 
-The test app also runs according to the handout and the access point must be run in "//host/name" format with the IP/host
+The test app also runs according to the handout and the access point must be run in "//host/name" or "name" format with the IP/host
 and RMI object name of the Peer intended to be the initiator Peer.
 
 java TestApp <accessPoint> <protocol> <opnd1> <opnd2>
 
-accessPoint - remote object name (must be in "//host/name" format)
+accessPoint - remote object name (must be in "//host/name" or "name" format)
 protocol    - BACKUP, RESTORE, DELETE, RECLAIM, STATE
 opnd1       - pathname, max KB if RECLAIM, STATE has no operands
 opnd2       - repDeg if BACKUP
