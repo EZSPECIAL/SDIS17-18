@@ -47,7 +47,7 @@ public class BackupProtocol implements Runnable {
 		// PUTCHUNK message loop
 		try {
 			if(this.putchunkLoop(peer, state)) SystemManager.getInstance().logPrint("finished " + backMsg, SystemManager.LogLevel.NORMAL);
-			else SystemManager.getInstance().logPrint("failed " + backMsg, SystemManager.LogLevel.NORMAL);
+			else SystemManager.getInstance().logPrint("failed " + backMsg + ", replication degree lower than desired", SystemManager.LogLevel.NORMAL);
 		} catch(InterruptedException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception or thread interruption on backup protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
@@ -89,7 +89,9 @@ public class BackupProtocol implements Runnable {
 	 */
 	private boolean putchunkLoop(Peer peer, ProtocolState state) throws InterruptedException, IOException {
 		
-		while(state.getAttempts() < Peer.maxAttempts) {
+		boolean valid = true;
+		
+		while(!state.isFinished()) {
 			
 			// Prepare and send next PUTCHUNK message
 			byte[] msg = state.getParser().createPutchunkMsg(peer.getPeerID(), state);
@@ -97,23 +99,21 @@ public class BackupProtocol implements Runnable {
 
 			int timeoutMS = (int) (Peer.baseTimeoutMS * Math.pow(2, state.getAttempts()));
 			Thread.sleep(timeoutMS);
-
+			state.incrementAttempts();
+			
 			// Check if expected unique STORED messages were received
-			if(state.isStoredCountCorrect()) {
+			if(state.isStoredCountCorrect() || state.getAttempts() >= Peer.maxAttempts) {
+				
+				if(state.getAttempts() >= Peer.maxAttempts) valid = false;
 				
 				// Update database with initiated chunk
 				peer.getDatabase().backupUpdate(state);
 				
 				state.incrementCurrentChunkNo();
 				state.resetStoredCount();
-			} else {
-				SystemManager.getInstance().logPrint("not enough STORED messages whithin " + timeoutMS + "ms", SystemManager.LogLevel.DEBUG);
-				state.incrementAttempts();
-			}
-
-			if(state.isFinished()) return true;
+			} else SystemManager.getInstance().logPrint("not enough STORED messages whithin " + timeoutMS + "ms", SystemManager.LogLevel.DEBUG);
 		}
-		
-		return false;
+
+		return valid;
 	}
 }
