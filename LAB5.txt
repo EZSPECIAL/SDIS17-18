@@ -1,0 +1,22 @@
+SSLServerSocket
+SSLSocket
+
+SSLServerSocketFactory
+SSLSocketFactory
+
+SSLSocket
+    - setEnabledProtocols(TLS 1.2)
+    - setNeedClientAuth(true)
+
+getSupportedCipherSuites
+setEnabledCipherSuites
+
+Keystore
+    - private key
+    - digital cert
+
+Truststore
+    - digital cert
+
+https://security.stackexchange.com/questions/71330/jsse-recommended-cipher-suites
+https://technology.amis.nl/2017/07/04/ssltls-choose-cipher-suite/
