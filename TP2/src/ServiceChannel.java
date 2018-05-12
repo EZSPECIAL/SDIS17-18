@@ -2,21 +2,18 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class ServiceChannel implements Runnable {
 
 	private static final int packetSize = 65000;
-	private static final int executorThreadsMax = 20;
 
 	// Multicast socket settings
 	private InetAddress addr;
 	private int port;
 	private String channelName;
 	private MulticastSocket socket;
-
-	private ExecutorService executor = Executors.newFixedThreadPool(executorThreadsMax);
+	private LinkedBlockingQueue<DatagramPacket> messages = new LinkedBlockingQueue<DatagramPacket>();
 
 	/**
 	 * A Service Channel is an object that provides methods for receiving and sending UDP packets
@@ -80,21 +77,27 @@ public class ServiceChannel implements Runnable {
 
 	@Override
 	public void run() {
-
+		
+		// Run this channel's message handler
+		new Thread(null, new ServiceChannelHandler(this, this.channelName), this.channelName + " handler").start();
+		
 		while(true) {
 
-			DatagramPacket packet;
 			try {
-				packet = this.listen();
+				DatagramPacket packet = this.listen();
+				this.messages.add(packet);
 			} catch(IOException e) {
-				SystemManager.getInstance().logPrint("I/O Exception on backup protocol!", SystemManager.LogLevel.NORMAL);
+				SystemManager.getInstance().logPrint("I/O Exception listening on channel!", SystemManager.LogLevel.NORMAL);
 				e.printStackTrace();
 				return;
 			}
-
-			// Submit to thread for processing
-			executor.submit(new SystemHandler(packet, this.channelName));
 		}
 	}
 
+	/**
+	 * @return the queue of received messages
+	 */
+	public LinkedBlockingQueue<DatagramPacket> getMessages() {
+		return messages;
+	}
 }

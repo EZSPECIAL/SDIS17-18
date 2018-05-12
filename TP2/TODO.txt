@@ -1,6 +1,6 @@
 
     - PUTCHUNK threading
-    - Channel concurrentlinkedqueue for messages and 1 thread for each queue processing
+    - File hash include first bytes / filename?
 
 ---------------------
 ENHANCEMENTS
@@ -40,9 +40,9 @@ SCALABILITY
 ---------------------
 
     - PUTCHUNK threading
-    - Channel concurrentlinkedqueue for messages and 1 thread for each queue processing
     - Async I/O (java.nio.channels.AsynchronousFileChannel)
     - RESTORE protocol keeping chunks in RAM?
+    - Check Thread.sleep()
 
 ---------------------
 CONSISTENCY
