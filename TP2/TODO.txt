@@ -1,0 +1,65 @@
+
+    - PUTCHUNK threading
+    - Channel concurrentlinkedqueue for messages and 1 thread for each queue processing
+
+---------------------
+ENHANCEMENTS
+---------------------
+
+Restore (using TCP)
+
+    - ServerSocket - start TCP connection
+    - Socket - transfer data
+    - ServerSocket(int port)
+    - ServerSocket(int port, int backlog, InetAddress addr)
+    - Socket(InetAddress addr, int port)
+
+    - socket.accept() - wait for connection
+    - socket.close() / shutdownOutput()
+
+    - getInputStream() BufferedReader -> ReadLine()
+    - getOutputStream() PrintWriter -> println()
+    - ObjectInputStream() implements Serializable
+    - ObjectOutputStream() implements Serializable
+
+    - multiple clients
+
+Delete
+
+    - delete chunks even if Peer is currently offline (WAKEUP message, store database, sync database? / lease?)
+
+---------------------
+SECURITY
+---------------------
+
+    - HMAC message
+    - encrypt/decrypt message
+
+---------------------
+SCALABILITY
+---------------------
+
+    - PUTCHUNK threading
+    - Channel concurrentlinkedqueue for messages and 1 thread for each queue processing
+    - Async I/O (java.nio.channels.AsynchronousFileChannel)
+    - RESTORE protocol keeping chunks in RAM?
+
+---------------------
+CONSISTENCY
+---------------------
+
+    - synchronize databases across Peers
+
+---------------------
+FAULT-TOLERANCE
+---------------------
+
+    - save/load DB (serializable)
+    - add file metadata to DB
+
+---------------------
+EXTRAS
+---------------------
+
+    - edit msg: add a new header line / protocol version != 1.0
+    - every protocol playing nice with each other (prevent same peer same protocol same file)

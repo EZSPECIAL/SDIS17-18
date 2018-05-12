@@ -1,0 +1,172 @@
+K = 1000 (always)
+
+---------------------
+RUNNING
+---------------------
+
+java StartPeer <version> <id> <accessPoint> <mcc> <mdb> <mdr> [<logLevel> <logMethod>]
+
+version     - 1.0 or 1.1
+id          - non zero positive
+accesspoint - remote object name (must be in "//host/name" or "name" format)
+mcc         - IP:port of multicast control channel
+mdb         - IP:port of multicast data backup channel
+mdr         - IP:port of multicast data restore channel
+logLevel    - NONE, NORMAL, DEBUG, VERBOSE
+logMethod   - CONSOLE, FILE, BOTH
+
+java TestApp <accessPoint> <protocol> <opnd1> <opnd2>
+
+accessPoint - remote object name (must be in "//host/name" or "name" format)
+protocol    - NONE, NORMAL, SERVICE_MSG, DEBUG, DATABASE, VERBOSE
+opnd1       - pathname, max KB if RECLAIM, STATE has no operands
+opnd2       - repDeg if BACKUP
+
+---------------------
+PEER
+---------------------
+
+    - identified by ID (1 to INT_MAX)
+    - has a local folder that serves as their virtual HDD
+
+---------------------
+SERVICE MESSAGE
+---------------------
+
+    - header / body (data)
+    - 1+ space between fields
+    - 0+ spaces on last field
+    - header termination <CRLF><CRLF>
+    - new/modified messages can have more header fields, ignore them in parser
+    - drop any unrecognized message
+
+    - message type (protocol)
+    - version ("1.0")
+    - senderID (peer id)
+    - fileID (sha256 with last modified metadata, encoded as HEX to ASCII)
+    - chunkNo (start at 0, up to 6 digits)
+    - repDegree (1 to 9, store N copies in system)
+
+    - body (file divided in 64K chunks identified by (fileID, chunkNo), last chunk has 0 to 63999 size)
+    
+---------------------
+MULTICAST CHANNELS
+---------------------
+
+    - mcc (control)
+    - mdb (data backup)
+    - mdr (data restore)
+    - created with IP:port pair through command line arguments
+
+---------------------
+DATABASE & DISK
+---------------------
+
+    - max disk space and keep count of chunk disk space usage
+    - local database of everything in the system
+    - "STATE" protocol
+    - "A peer should also count the number of confirmation messages for each of the chunks it has stored and keep that
+    count in non-volatile memory. This information can be useful if the peer runs out of disk space: in that event,
+    the peer may try to free some space by evicting chunks whose actual replication degree is higher than the desired
+    replication degree."
+
+---------------------
+PROTOCOLS
+---------------------
+
+Backup
+
+    Initiator
+    - MDB -> PUTCHUNK <Version> <SenderId> <FileId> <ChunkNo> <ReplicationDeg> <CRLF><CRLF><Body>
+    - a Peer must never store the chunks of its own files
+    - 1 sec to receive repDegree STORED else resends -> double the interval up to 5 times
+    - STORED must come from different Peers
+
+    Peers
+    - MC -> STORED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+    - random delay between 0 and 400ms
+
+Delete
+
+    Initiator
+    - MC -> DELETE <Version> <SenderId> <FileId> <CRLF><CRLF>
+    - all peers delete their chunks of the file
+    - send N times to ensure reception of message
+
+Restore
+
+    Initiator
+    - MC -> GETCHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+    - save file with _restore appended "file_restored.png" or "file_restored" if no extension
+    - save in same filepath as original file or a "restored" folder
+
+    Peers (that have the file-chunk)
+    - MDR -> CHUNK <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF><Body>
+    - random delay between 0 and 400ms
+    - "To avoid flooding the host with CHUNK messages, each peer shall wait for a random time uniformly distributed
+between 0 and 400 ms, before sending the CHUNK message. If it receives a CHUNK message before that time expires,
+it will not send the CHUNK message."
+
+Reclaim
+
+    Initiator
+    - MC -> REMOVED <Version> <SenderId> <FileId> <ChunkNo> <CRLF><CRLF>
+    - Peers receiving this message that have the chunk update the local repDeg count
+    - If repDeg count is below desired for that chunk, starts Backup protocol with delay (0 to 400ms)
+    - If during 0 to 400ms delay a PUTCHUNK for the same chunk is received, abort
+
+State
+
+    For each file Peer has initiated backup of
+        - file pathname
+        - backup file service ID
+        - desired repDeg
+    For each chunk of the file
+        - id
+        - perceived repDeg
+    For each chunk it stores
+        - id
+        - size in KB
+        - perceived repDeg
+    Curr KB used / max KB possible
+
+---------------------
+ENHANCEMENTS
+---------------------
+
+Backup
+
+    - ensure repDegre
+    - keep interoperability
+
+---------------------
+THREADING
+---------------------
+
+Version 1
+
+    - one protocol instance at a time
+    - one thread for each peer
+
+Version 2
+
+    - one protocol instance at a time
+    - one thread per channel (control, backup, restore)
+    - msg thread is endless loop of receive -> process
+    - multicaster thread (thread.sleep() for timeout), created for TestApp, terminated on protocol finish
+    - TestApp RMI creates multicaster thread to handle protocol invoked
+
+Version 3
+
+    - multiple multicaster instances on any Peer, handle 1 protocol
+    - one thread per channel
+    - java.util.concurrent.ConcurrentHashMap to store protocol state instances
+
+Version 4
+
+    - receiver threads now use worker threads for processing so that they can keep listening
+    - java.util.concurrent.ThreadPoolExecutor
+
+Version 5
+
+    - no thread.sleep() for timeouts with java.util.concurrent.ScheduledThreadPoolExecutor which allows a "timeout" handler
