@@ -1,6 +1,9 @@
+import java.io.Serializable;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ChunkInfo {
+public class ChunkInfo implements Serializable {
+	
+	private static final long serialVersionUID = -8533030704600707408L;
 	
 	private String id;
 	private int desiredRepDeg;

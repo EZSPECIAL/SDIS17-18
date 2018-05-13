@@ -1,6 +1,9 @@
+import java.io.Serializable;
 
-public class FileInfo {
+public class FileInfo implements Serializable {
 
+	private static final long serialVersionUID = -629018722917809320L;
+	
 	private String filepath;
 	private String fileID;
 	private int desiredRepDeg;

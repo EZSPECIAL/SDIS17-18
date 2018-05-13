@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.net.*;
 
 public class StartPeer {
@@ -27,7 +28,13 @@ public class StartPeer {
 	 * @param args 8.  logging method
 	 */
 	public static void main(String[] args) {
-		parseArguments(args);
+		try {
+			parseArguments(args);
+		} catch (ClassNotFoundException | IOException e) {
+			SystemManager.getInstance().logPrint("I/O Exception initializing Peer!", SystemManager.LogLevel.NORMAL);
+			e.printStackTrace();
+			return;
+		}
 	}
 	
 	/**
@@ -35,7 +42,7 @@ public class StartPeer {
 	 * 
 	 * @param args command line arguments received
 	 */
-	private static void parseArguments(String[] args) {
+	private static void parseArguments(String[] args) throws ClassNotFoundException, IOException {
 		
 		if(args.length != 6 && args.length != 8) cmdErr("wrong number of arguments!");
 		

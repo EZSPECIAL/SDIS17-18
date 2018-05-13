@@ -1,10 +1,65 @@
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class SystemDatabase {
+public class SystemDatabase implements Serializable, Runnable {
+
+	private static final long serialVersionUID = -3900468368934039133L;
+	private static final long backupDelay = 5000;
 
 	private ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> chunks = new ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>>(8, 0.9f, 1);
 	private ConcurrentHashMap<String, FileInfo> initiatedFiles = new ConcurrentHashMap<String, FileInfo>(8, 0.9f, 1);
 
+	/**
+	 * Backs up the current database to file.
+	 */
+	synchronized void saveDatabase() throws IOException {
+		
+		String databaseFolder = "../" + Peer.databaseFolderName;
+		Peer.getInstance().createDirIfNotExists(databaseFolder);
+		String databasePath = databaseFolder + "/" + Peer.databasePrefix + Peer.getInstance().getPeerID();
+		
+		FileOutputStream file = new FileOutputStream(databasePath);
+		ObjectOutputStream output = new ObjectOutputStream(file);
+		output.writeObject(this);
+		
+		output.close();
+		file.close();
+		
+		SystemManager.getInstance().logPrint("Saved database", SystemManager.LogLevel.VERBOSE);
+	}
+
+	/**
+	 * Loads a backed up database.
+	 * 
+	 * @param databasePath the path of the database to load
+	 * @return the database object loaded, null if no database file was found
+	 */
+	static synchronized SystemDatabase loadDatabase(String databasePath) throws ClassNotFoundException, IOException {
+		
+		File db = new File(databasePath);
+		if(db.exists() && db.isFile()) {
+			
+			FileInputStream file = new FileInputStream(databasePath);
+			ObjectInputStream input = new ObjectInputStream(file);
+			
+			SystemDatabase database = (SystemDatabase) input.readObject();
+			
+			input.close();
+			file.close();
+			
+			SystemManager.getInstance().logPrint("Loaded database", SystemManager.LogLevel.NORMAL);
+			return database;
+		} else return null;
+	}
+		
 	/**
 	 * Updates the database with the received PUTCHUNK message info about a chunk.
 	 * Inserts new chunk info if it didn't exist or updates desired replication degree
@@ -168,4 +223,22 @@ public class SystemDatabase {
 		this.initiatedFiles = initiatedFiles;
 	}
 
+	@Override
+	public void run() {
+		
+		Timer timer = new Timer();
+		
+		timer.scheduleAtFixedRate(new TimerTask() {
+			  @Override
+			  public void run() {
+			    try {
+					Peer.getInstance().getDatabase().saveDatabase();
+				} catch (IOException e) {
+					SystemManager.getInstance().logPrint("I/O Exception saving database periodically!", SystemManager.LogLevel.NORMAL);
+					e.printStackTrace();
+					return;
+				}
+			  }
+			}, SystemDatabase.backupDelay, SystemDatabase.backupDelay);
+	}
 }

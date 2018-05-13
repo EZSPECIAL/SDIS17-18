@@ -28,6 +28,8 @@ public class Peer implements RMITesting {
 	public static final String peerFolderPrefix = "Peer_";
 	public static final String restoredFolderName = "Restored";
 	public static final String restoredSuffix = "_restoredBy";
+	public static final String databaseFolderName = "Database";
+	public static final String databasePrefix = "Peer_";
 	
 	// Public header indices
 	public static final int protocolI = 0;
@@ -52,7 +54,7 @@ public class Peer implements RMITesting {
 	private ServiceChannel mdb;
 	private ServiceChannel mdr;
 	
-	private SystemDatabase database = new SystemDatabase();
+	private SystemDatabase database;
 	private ConcurrentHashMap<String, ProtocolState> protocols = new ConcurrentHashMap<String, ProtocolState>(8, 0.9f, 1);
 	private ScheduledExecutorService executor = Executors.newScheduledThreadPool(executorThreadsMax);
 
@@ -84,16 +86,44 @@ public class Peer implements RMITesting {
 	 * @param mdrAddr address of the multicast data restore channel
 	 * @param mdrPort port for the multicast data restore channel
 	 */
-	public void initPeer(String protocolVersion, int peerID, String accessPoint, InetAddress mccAddr, int mccPort, InetAddress mdbAddr, int mdbPort, InetAddress mdrAddr, int mdrPort) {
+	public void initPeer(String protocolVersion, int peerID, String accessPoint, InetAddress mccAddr, int mccPort, InetAddress mdbAddr, int mdbPort, InetAddress mdrAddr, int mdrPort) throws ClassNotFoundException, IOException {
 		
 		this.protocolVersion = protocolVersion;
 		this.peerID = peerID;
 		this.accessPoint = accessPoint;
 		
+		// Load database
+		SystemDatabase db = SystemDatabase.loadDatabase("../" + Peer.databaseFolderName + "/" + Peer.databasePrefix + this.peerID);
+		
+		// Use loaded data or create new database if it didn't exist
+		if(db != null) this.database = db;
+		else this.database = new SystemDatabase();
+
+		// Add hook to save database on shutdown
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+		    public void run() {
+		    	
+		        SystemDatabase database = Peer.getInstance().getDatabase();
+
+		        if(database != null) {
+		        	try {
+						SystemManager.getInstance().logPrint("Saving database...", SystemManager.LogLevel.NORMAL);
+						database.saveDatabase();
+					} catch (IOException e) {
+						SystemManager.getInstance().logPrint("I/O Exception saving database on shutdown!", SystemManager.LogLevel.NORMAL);
+						e.printStackTrace();
+						return;
+					}
+		        } else SystemManager.getInstance().logPrint("Database is null", SystemManager.LogLevel.DEBUG);
+		    }
+		});
+		
 		this.mcc = new ServiceChannel(mccAddr, mccPort, "mcc");
 		this.mdb = new ServiceChannel(mdbAddr, mdbPort, "mdb");
 		this.mdr = new ServiceChannel(mdrAddr, mdrPort, "mdr");
 		
+		// Run channels and database backup service
+		new Thread(null, this.database, "database backup").start();
 		new Thread(null, this.mcc, "control channel").start();
 		new Thread(null, this.mdb, "backup channel").start();
 		new Thread(null, this.mdr, "recovery channel").start();

@@ -8,6 +8,8 @@ CHANGELOG
     - Backup PUTCHUNK message is now sent using multiple threads instead of sequentially, each thread runs the timeout and waits for the desired STORED message count
     - Restore protocol no longer keeps chunks in RAM, writes batches of chunks as they arrive
     - File hash no longer uses accessed date, currently uses filename + last modified date
+    - Database is saved periodically and on shutdown
+    - Database is loaded if it exists
 
 ---------------------
 RUNNING

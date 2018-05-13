@@ -25,7 +25,7 @@ Restore (using TCP)
 
 Delete
 
-    - delete chunks even if Peer is currently offline (WAKEUP message, store database, sync database? / lease?)
+    - delete chunks even if Peer is currently offline (WAKEUP message, DELETED message)
 
 ---------------------
 SECURITY
@@ -51,7 +51,6 @@ CONSISTENCY
 FAULT-TOLERANCE
 ---------------------
 
-    - save / load DB (use Serializable / addShutdownHook)
     - add file metadata to DB
 
 ---------------------
