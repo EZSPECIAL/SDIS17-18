@@ -1,5 +1,4 @@
 
-    - PUTCHUNK threading
     - File hash include first bytes / filename?
 
 ---------------------
@@ -39,7 +38,6 @@ SECURITY
 SCALABILITY
 ---------------------
 
-    - PUTCHUNK threading
     - Async I/O (java.nio.channels.AsynchronousFileChannel)
     - RESTORE protocol keeping chunks in RAM?
     - Check Thread.sleep()

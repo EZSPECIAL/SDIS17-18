@@ -1,6 +1,13 @@
 K = 1000 (always)
 
 ---------------------
+CHANGELOG
+---------------------
+
+    - Messages are put into queues for higher scalibility and lower probability of dropping messages
+    - Backup PUTCHUNK message is now sent using multiple threads instead of sequentially sending, each thread runs the timeout and waits for the desired STORED message count
+
+---------------------
 RUNNING
 ---------------------
 

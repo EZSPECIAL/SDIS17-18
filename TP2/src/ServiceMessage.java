@@ -47,32 +47,7 @@ public class ServiceMessage {
 	 * 
 	 * @param peerID the numeric identifier of the sending Peer
 	 * @param state the Protocol State object relevant to this operation
-	 * @return the binary data representing the message
-	 */
-	public byte[] createPutchunkMsg(int peerID, ProtocolState state) throws IOException {
-
-		// Get binary file data
-	    byte[] buf = new byte[dataSize];
-		int nRead = this.getData(state.getFilepath(), state.getCurrentChunkNo(), buf);
-		
-        String readMsg = "putchunk nRead: " + nRead;
-        SystemManager.getInstance().logPrint(readMsg, SystemManager.LogLevel.VERBOSE);
-	    
-	    // Merge header and body to single byte[]
-        String header = "PUTCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + " " + state.getDesiredRepDeg() + headerTermination;
-	    		
-        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
-		
-		if(nRead <= 0) return header.getBytes();
-		else return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
-	}
-	
-	// TODO merge
-	/**
-	 * Returns a service message with the following format: "PUTCHUNK &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt; &lt;ChunkNo&gt; &lt;ReplicationDegree&gt;".
-	 * 
-	 * @param peerID the numeric identifier of the sending Peer
-	 * @param state the Protocol State object relevant to this operation
+	 * @param chunkNo the chunk number relevant to this operation
 	 * @return the binary data representing the message
 	 */
 	public byte[] createPutchunkMsg(int peerID, ProtocolState state, Long chunkNo) throws IOException {
