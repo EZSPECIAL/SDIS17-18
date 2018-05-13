@@ -1,3 +1,4 @@
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -7,13 +8,17 @@ public class InfoProtocol implements Runnable {
 	public void run() {
 		
 		Peer peer = Peer.getInstance();
-		ConcurrentHashMap<String, ConcurrentHashMap<Long, ChunkInfo>> chunks = peer.getDatabase().getChunks();
-		ConcurrentHashMap<String, FileInfo> files = peer.getDatabase().getInitiatedFiles();
+		SystemDatabase db = peer.getDatabase();
+		
+		ConcurrentHashMap<String, ConcurrentHashMap<Long, ChunkInfo>> chunks = db.getChunks();
+		ConcurrentHashMap<String, FileInfo> files = db.getInitiatedFiles();
+		ConcurrentHashMap<Integer, HashSet<String>> toDelete = db.getFilesToDelete();
 		
 		this.printInitiated(files);
 		this.printStored(chunks);
 		this.printSystemChunks(chunks);
 		this.printDiskUsage();
+		this.printDeletionList(toDelete);
 	}
 	
 	/**
@@ -75,6 +80,24 @@ public class InfoProtocol implements Runnable {
 				SystemManager.getInstance().simpleLog("SYSTEM CHUNK", SystemManager.LogLevel.NORMAL);
 				SystemManager.getInstance().simpleLog("\tid: " + chunk.getId(), SystemManager.LogLevel.NORMAL);
 				SystemManager.getInstance().simpleLog("\tperceived repDeg: " + chunk.getPerceivedRepDeg().size(), SystemManager.LogLevel.NORMAL);
+			}
+		}
+	}
+
+	/**
+	 * Prints the files that should be deleted from each Peer.
+	 * 
+	 * @param files the map containing info about the Peers that have files that should be deleted
+	 */
+	private void printDeletionList(ConcurrentHashMap<Integer, HashSet<String>> files) {
+		
+		SystemManager.getInstance().simpleLog("DEBUG DELETE ENH", SystemManager.LogLevel.DEBUG);
+		
+		for(Map.Entry<Integer, HashSet<String>> peer : files.entrySet()) {
+			
+			SystemManager.getInstance().simpleLog("Peer " + peer.getKey(), SystemManager.LogLevel.DEBUG);
+			for(String value : peer.getValue()) {
+				SystemManager.getInstance().simpleLog("\t" + value, SystemManager.LogLevel.DEBUG);
 			}
 		}
 	}

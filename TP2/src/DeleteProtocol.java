@@ -98,13 +98,44 @@ public class DeleteProtocol implements Runnable {
 		HashSet<Integer> peersWithFile = new HashSet<Integer>();
 		ConcurrentHashMap<Long, ChunkInfo> chunks = peer.getDatabase().getChunks().get(state.getHashHex());
 		
-		for(Map.Entry<Long, ChunkInfo> chunk : chunks.entrySet()) {
-			peersWithFile.addAll(chunk.getValue().getPerceivedRepDeg().keySet());
+		if(chunks != null) {
+			for(Map.Entry<Long, ChunkInfo> chunk : chunks.entrySet()) {
+				peersWithFile.addAll(chunk.getValue().getPerceivedRepDeg().keySet());
+			}
 		}
 		
 		SystemManager.getInstance().logPrint("unique peers with file: " + peersWithFile.size(), SystemManager.LogLevel.VERBOSE);
+		
+		// Send DELETE messages and wait for confirmations if file exists on backup service
+		if(peersWithFile.size() != 0) {
+			
+			if(!this.deleteLoop(peer, state, peersWithFile)) {
 
-		// Send DELETE messages
+				SystemManager.getInstance().logPrint("not enough responses to DELETE, storing missing confirmation for later", SystemManager.LogLevel.NORMAL);
+
+				// Add to database the Peers that haven't responded to this DELETE request
+				peersWithFile.removeAll(state.getRespondedID().get(0L));
+				peer.getDatabase().addToDelete(peersWithFile, state.getHashHex());
+			}
+		} else SystemManager.getInstance().logPrint("file does not seem to be backed up, cancelling deletion", SystemManager.LogLevel.NORMAL);
+		
+		peer.getProtocols().remove(key);
+		SystemManager.getInstance().logPrint("key removed: " + key, SystemManager.LogLevel.VERBOSE);
+		SystemManager.getInstance().logPrint("finished " + delMsg, SystemManager.LogLevel.NORMAL);
+	}
+	
+	/**
+	 * Sends DELETE messages and waits for the expected Peers to confirm deletion.
+	 * Resends a set number of times and on time out adds the remaining Peers to
+	 * the database so they can be sent the DELETE message later.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @param state the Protocol State object relevant to this operation
+	 * @param peersWithFile peers that have the file
+	 * @return whether enough deletion confirmations were received
+	 */
+	private boolean deleteLoop(Peer peer, ProtocolState state, HashSet<Integer> peersWithFile) throws IOException, InterruptedException {
+		
 		while(this.attempts < DeleteProtocol.maxAttempts) {
 
 			// Prepare and send next DELETE message
@@ -123,14 +154,12 @@ public class DeleteProtocol implements Runnable {
 			SystemManager.getInstance().logPrint(respondedMsg, SystemManager.LogLevel.DEBUG);
 			
 			// Finish if responded Peer IDs and expected Peer IDs match
-			if(state.getRespondedID().get(0L).containsAll(peersWithFile)) break;
+			if(state.getRespondedID().get(0L).containsAll(peersWithFile)) return true;
 
 			SystemManager.getInstance().logPrint("not enough DELETED messages whithin " + timeoutMS + "ms", SystemManager.LogLevel.DEBUG);
 		}
 		
-		peer.getProtocols().remove(key);
-		SystemManager.getInstance().logPrint("key removed: " + key, SystemManager.LogLevel.VERBOSE);
-		SystemManager.getInstance().logPrint("finished " + delMsg, SystemManager.LogLevel.NORMAL);
+		return false;
 	}
 	
 	/**

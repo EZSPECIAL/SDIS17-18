@@ -1,5 +1,5 @@
 
-
+    - DELETE ENH add WAKEUP message and run pending deletions
 
 ---------------------
 ENHANCEMENTS
@@ -23,10 +23,6 @@ Restore (using TCP)
 
     - multiple clients
 
-Delete
-
-    - delete chunks even if Peer is currently offline (WAKEUP message, DELETED message)
-
 ---------------------
 SECURITY
 ---------------------
@@ -42,12 +38,6 @@ SCALABILITY
     - Check all Thread.sleep() in code and see if they make sense
 
 ---------------------
-CONSISTENCY
----------------------
-
-    - synchronize databases across Peers
-
----------------------
 FAULT-TOLERANCE
 ---------------------
 
@@ -57,7 +47,8 @@ FAULT-TOLERANCE
 EXTRAS
 ---------------------
 
+    - synchronize databases across Peers
     - file hash, add initial bytes
-    - edit msg: add a new header line / protocol version != 1.0
     - every protocol playing nice with each other (prevent same peer same protocol same file)
     - DELETE ENH version mismatch
+    - DELETE ENH delete -> backup -> old delete deletes new backup if same file

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,6 +17,7 @@ public class SystemDatabase implements Serializable, Runnable {
 
 	private ConcurrentHashMap<String, ConcurrentHashMap<Long, ChunkInfo>> chunks = new ConcurrentHashMap<String, ConcurrentHashMap<Long, ChunkInfo>>(8, 0.9f, 1);
 	private ConcurrentHashMap<String, FileInfo> initiatedFiles = new ConcurrentHashMap<String, FileInfo>(8, 0.9f, 1);
+	private ConcurrentHashMap<Integer, HashSet<String>> filesToDelete = new ConcurrentHashMap<Integer, HashSet<String>>(8, 0.9f, 1);
 
 	/**
 	 * Backs up the current database to file.
@@ -194,7 +196,27 @@ public class SystemDatabase implements Serializable, Runnable {
 	    	return -1;
 	    }
 	}
+
+	/**
+	 * Adds to the database the given hash as being flagged for later deletion for each given Peer.
+	 * 
+	 * @param peers the peers that haven't deleted the file
+	 * @param hash textual representation of the hexadecimal values of a SHA256
+	 */
+	public void addToDelete(HashSet<Integer> peers, String hash) {
 		
+		for(Integer key : peers) {
+			
+			HashSet<String> fileHashes = this.filesToDelete.get(key);
+			if(fileHashes == null) fileHashes = new HashSet<String>();
+			
+			fileHashes.add(hash);
+			this.filesToDelete.put(key, fileHashes);
+			
+		    SystemManager.getInstance().logPrint("added hash " + hash + " as needing deletion for Peer " + key, SystemManager.LogLevel.DATABASE);
+		}
+	}
+	
 	/**
 	 * @return the hash map of hash maps containing info about chunks in the system
 	 */
@@ -221,6 +243,13 @@ public class SystemDatabase implements Serializable, Runnable {
 	 */
 	public void setInitiatedFiles(ConcurrentHashMap<String, FileInfo> initiatedFiles) {
 		this.initiatedFiles = initiatedFiles;
+	}
+
+	/**
+	 * @return the hash map containing the files not yet deleted
+	 */
+	public ConcurrentHashMap<Integer, HashSet<String>> getFilesToDelete() {
+		return filesToDelete;
 	}
 
 	@Override
