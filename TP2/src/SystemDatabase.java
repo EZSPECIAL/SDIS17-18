@@ -14,7 +14,7 @@ public class SystemDatabase implements Serializable, Runnable {
 	private static final long serialVersionUID = -3900468368934039133L;
 	private static final long backupDelay = 5000;
 
-	private ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> chunks = new ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>>(8, 0.9f, 1);
+	private ConcurrentHashMap<String, ConcurrentHashMap<Long, ChunkInfo>> chunks = new ConcurrentHashMap<String, ConcurrentHashMap<Long, ChunkInfo>>(8, 0.9f, 1);
 	private ConcurrentHashMap<String, FileInfo> initiatedFiles = new ConcurrentHashMap<String, FileInfo>(8, 0.9f, 1);
 
 	/**
@@ -71,11 +71,11 @@ public class SystemDatabase implements Serializable, Runnable {
 	public void putchunkUpdate(ProtocolState state, int size) {
 		
 		String hashKey = state.getFields()[Peer.hashI];
-		int chunkKey = Integer.parseInt(state.getFields()[Peer.chunkNoI]);
+		long chunkKey = Long.parseLong(state.getFields()[Peer.chunkNoI]);
 		
-		this.chunks.putIfAbsent(hashKey, new ConcurrentHashMap<Integer, ChunkInfo>(8, 0.9f, 1));
+		this.chunks.putIfAbsent(hashKey, new ConcurrentHashMap<Long, ChunkInfo>(8, 0.9f, 1));
 		
-		ConcurrentHashMap<Integer, ChunkInfo> chunksInfo = this.chunks.get(hashKey);
+		ConcurrentHashMap<Long, ChunkInfo> chunksInfo = this.chunks.get(hashKey);
 		
 		int repDeg = Integer.parseInt(state.getFields()[Peer.repDegI]);
 		if(chunksInfo.putIfAbsent(chunkKey, new ChunkInfo(hashKey + "." + chunkKey, repDeg, size)) != null) {
@@ -96,11 +96,11 @@ public class SystemDatabase implements Serializable, Runnable {
 	public void storedUpdate(ProtocolState state) {
 		
 		String hashKey = state.getFields()[Peer.hashI];
-		int chunkKey = Integer.parseInt(state.getFields()[Peer.chunkNoI]);
+		long chunkKey = Long.parseLong(state.getFields()[Peer.chunkNoI]);
 		
-		this.chunks.putIfAbsent(hashKey, new ConcurrentHashMap<Integer, ChunkInfo>(8, 0.9f, 1));
+		this.chunks.putIfAbsent(hashKey, new ConcurrentHashMap<Long, ChunkInfo>(8, 0.9f, 1));
 		
-		ConcurrentHashMap<Integer, ChunkInfo> chunksInfo = this.chunks.get(hashKey);
+		ConcurrentHashMap<Long, ChunkInfo> chunksInfo = this.chunks.get(hashKey);
 		
 		if(chunksInfo.putIfAbsent(chunkKey, new ChunkInfo(hashKey + "." + chunkKey)) != null) {
 			chunksInfo.get(chunkKey).getPerceivedRepDeg().put(Integer.parseInt(state.getFields()[Peer.senderI]), 0);
@@ -159,7 +159,7 @@ public class SystemDatabase implements Serializable, Runnable {
 	public int removedUpdate(ProtocolState state) {
 		
 		String hashKey = state.getFields()[Peer.hashI];
-		int chunkKey = Integer.parseInt(state.getFields()[Peer.chunkNoI]);
+		long chunkKey = Long.parseLong(state.getFields()[Peer.chunkNoI]);
 		
 		// Check that file hash exists
 		if(!this.chunks.containsKey(hashKey)) {
@@ -167,7 +167,7 @@ public class SystemDatabase implements Serializable, Runnable {
 			return -1;
 		}
 
-		ConcurrentHashMap<Integer, ChunkInfo> chunksInfo = this.chunks.get(hashKey);
+		ConcurrentHashMap<Long, ChunkInfo> chunksInfo = this.chunks.get(hashKey);
 		
 		// Check that chunk exists
 		if(!chunksInfo.containsKey(chunkKey)) {
@@ -194,18 +194,18 @@ public class SystemDatabase implements Serializable, Runnable {
 	    	return -1;
 	    }
 	}
-	
+		
 	/**
 	 * @return the hash map of hash maps containing info about chunks in the system
 	 */
-	public ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> getChunks() {
+	public ConcurrentHashMap<String, ConcurrentHashMap<Long, ChunkInfo>> getChunks() {
 		return chunks;
 	}
 
 	/**
 	 * @param chunks the hash map of hash maps containing info about chunks in the system
 	 */
-	public void setChunks(ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> chunks) {
+	public void setChunks(ConcurrentHashMap<String, ConcurrentHashMap<Long, ChunkInfo>> chunks) {
 		this.chunks = chunks;
 	}
 

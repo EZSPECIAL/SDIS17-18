@@ -7,7 +7,7 @@ public class InfoProtocol implements Runnable {
 	public void run() {
 		
 		Peer peer = Peer.getInstance();
-		ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> chunks = peer.getDatabase().getChunks();
+		ConcurrentHashMap<String, ConcurrentHashMap<Long, ChunkInfo>> chunks = peer.getDatabase().getChunks();
 		ConcurrentHashMap<String, FileInfo> files = peer.getDatabase().getInitiatedFiles();
 		
 		this.printInitiated(files);
@@ -38,11 +38,11 @@ public class InfoProtocol implements Runnable {
 	 * 
 	 * @param chunks the map containing info about the currently stored chunks
 	 */
-	private void printStored(ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> chunks) {
+	private void printStored(ConcurrentHashMap<String, ConcurrentHashMap<Long, ChunkInfo>> chunks) {
 		
-		for(Map.Entry<String, ConcurrentHashMap<Integer, ChunkInfo>> hashEntry : chunks.entrySet()) {
+		for(Map.Entry<String, ConcurrentHashMap<Long, ChunkInfo>> hashEntry : chunks.entrySet()) {
 			
-			for(Map.Entry<Integer, ChunkInfo> chunkEntry : hashEntry.getValue().entrySet()) {
+			for(Map.Entry<Long, ChunkInfo> chunkEntry : hashEntry.getValue().entrySet()) {
 				
 				ChunkInfo chunk = chunkEntry.getValue();
 				int size = chunk.getSize();
@@ -62,11 +62,11 @@ public class InfoProtocol implements Runnable {
 	 * 
 	 * @param chunks the map containing info about the perceived system chunks
 	 */
-	private void printSystemChunks(ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> chunks) {
+	private void printSystemChunks(ConcurrentHashMap<String, ConcurrentHashMap<Long, ChunkInfo>> chunks) {
 		
-		for(Map.Entry<String, ConcurrentHashMap<Integer, ChunkInfo>> hashEntry : chunks.entrySet()) {
+		for(Map.Entry<String, ConcurrentHashMap<Long, ChunkInfo>> hashEntry : chunks.entrySet()) {
 
-			for(Map.Entry<Integer, ChunkInfo> chunkEntry : hashEntry.getValue().entrySet()) {
+			for(Map.Entry<Long, ChunkInfo> chunkEntry : hashEntry.getValue().entrySet()) {
 
 				ChunkInfo chunk = chunkEntry.getValue();
 				int size = chunk.getSize();

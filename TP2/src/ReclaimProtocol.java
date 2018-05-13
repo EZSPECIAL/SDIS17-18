@@ -44,15 +44,15 @@ public class ReclaimProtocol implements Runnable {
 	 */
 	private void deleteChunks(Peer peer) throws IOException, InterruptedException {
 		
-		ConcurrentHashMap<String, ConcurrentHashMap<Integer, ChunkInfo>> chunks = peer.getDatabase().getChunks();
+		ConcurrentHashMap<String, ConcurrentHashMap<Long, ChunkInfo>> chunks = peer.getDatabase().getChunks();
 		boolean finishedF = false;
 		
 		// Try to erase chunks whose perceived replication degree is higher than the desired
-		for(Map.Entry<String, ConcurrentHashMap<Integer, ChunkInfo>> hashEntry : chunks.entrySet()) {
+		for(Map.Entry<String, ConcurrentHashMap<Long, ChunkInfo>> hashEntry : chunks.entrySet()) {
 			
 			String hash = hashEntry.getKey();
 			
-			for(Map.Entry<Integer, ChunkInfo> chunkEntry : hashEntry.getValue().entrySet()) {
+			for(Map.Entry<Long, ChunkInfo> chunkEntry : hashEntry.getValue().entrySet()) {
 				
 				ChunkInfo chunk = chunkEntry.getValue();
 				int size = chunk.getSize();
@@ -94,11 +94,11 @@ public class ReclaimProtocol implements Runnable {
 		SystemManager.getInstance().logPrint("not enough chunks to remove, removing randomly", SystemManager.LogLevel.DEBUG);
 		
 		// Erase chunks sequentially until space usage is below limit
-		for(Map.Entry<String, ConcurrentHashMap<Integer, ChunkInfo>> hashEntry : chunks.entrySet()) {
+		for(Map.Entry<String, ConcurrentHashMap<Long, ChunkInfo>> hashEntry : chunks.entrySet()) {
 			
 			String hash = hashEntry.getKey();
 			
-			for(Map.Entry<Integer, ChunkInfo> chunkEntry : hashEntry.getValue().entrySet()) {
+			for(Map.Entry<Long, ChunkInfo> chunkEntry : hashEntry.getValue().entrySet()) {
 				
 				ChunkInfo chunk = chunkEntry.getValue();
 				int size = chunk.getSize();

@@ -130,6 +130,21 @@ public class ProtocolState {
 		File file = new File(filepath);
 		this.filename = file.getName();
 		this.hashHex = computeSHA256(filepath);
+		
+		// Create hash set of deletion confirmations
+		this.respondedID.put(0L, new HashSet<Integer>());
+	}
+	
+	/**
+	 * Initialises the protocol state object for a delete response procedure by setting the required fields.
+	 * 
+	 * @param protocolVersion the backup system version
+	 * @param hash textual representation of the hexadecimal values of a SHA256
+	 */
+	public void initDeleteResponseState(String protocolVersion, String hash) throws NoSuchAlgorithmException, IOException {
+		
+		this.protocolVersion = protocolVersion;
+		this.hashHex = hash;
 	}
 	
 	/**

@@ -179,7 +179,7 @@ public class TimeoutHandler implements Runnable {
 	private boolean handleEnhancedBackup(Peer peer, ProtocolState state) {
 	    
 		String hashKey = state.getFields()[Peer.hashI];
-		int chunkHashkey = Integer.parseInt(state.getFields()[Peer.chunkNoI]);
+		long chunkHashkey = Long.parseLong(state.getFields()[Peer.chunkNoI]);
 		
 		// Check that file hash exists
 		if(!peer.getDatabase().getChunks().containsKey(hashKey)) {
@@ -187,7 +187,7 @@ public class TimeoutHandler implements Runnable {
 			return false;
 		}
 
-		ConcurrentHashMap<Integer, ChunkInfo> chunksInfo = peer.getDatabase().getChunks().get(hashKey);
+		ConcurrentHashMap<Long, ChunkInfo> chunksInfo = peer.getDatabase().getChunks().get(hashKey);
 		
 		// Check that chunk exists
 		if(!chunksInfo.containsKey(chunkHashkey)) {

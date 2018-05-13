@@ -83,7 +83,7 @@ public class BackupProtocol implements Runnable {
 	 * Initialises the ProtocolState object relevant to this backup procedure.
 	 * 
 	 * @param peer the singleton Peer instance
-	 * @return whether initialisation was successful
+	 * @return the key relevant to this protocol, null on error
 	 */
 	private String initializeProtocolInstance(Peer peer) throws NoSuchAlgorithmException, IOException {
 		

@@ -51,7 +51,7 @@ CONSISTENCY
 FAULT-TOLERANCE
 ---------------------
 
-    - add file metadata to DB
+    - restore even without original file (add file metadata to DB / force restore only on initiators?)
 
 ---------------------
 EXTRAS
@@ -60,3 +60,4 @@ EXTRAS
     - file hash, add initial bytes
     - edit msg: add a new header line / protocol version != 1.0
     - every protocol playing nice with each other (prevent same peer same protocol same file)
+    - DELETE ENH version mismatch

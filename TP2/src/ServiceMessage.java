@@ -17,6 +17,7 @@ public class ServiceMessage {
 	private static final int putchunkMinMsgLen = 6;
 	private static final int storedMinMsgLen = 5;
 	private static final int deleteMinMsgLen = 4;
+	private static final int deletedMinMsgLen = 4;
 	private static final int getchunkMinMsgLen = 5;
 	private static final int chunkMinMsgLen = 5;
 	private static final int removedMinMsgLen = 5;
@@ -93,6 +94,21 @@ public class ServiceMessage {
 	public byte[] createDeleteMsg(int peerID, ProtocolState state) {
 		
 		String header = "DELETE " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + headerTermination;
+		
+        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
+		return header.getBytes();
+	}
+	
+	/**
+	 * Returns a service message with the following format: "DELETED &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt;".
+	 * 
+	 * @param peerID the numeric identifier of the sending Peer
+	 * @param state the Protocol State object relevant to this operation
+	 * @return the binary data representing the message
+	 */
+	public byte[] createDeletedMsg(int peerID, ProtocolState state) {
+		
+		String header = "DELETED " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + headerTermination;
 		
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
 		return header.getBytes();
@@ -307,6 +323,13 @@ public class ServiceMessage {
 			if(!validateDelete(fields)) return false;
 			return true;
 			
+		// DELETE protocol response message for enhanced DELETE
+		case "DELETED":
+			
+			if(!validateHeaderSize(fields.length, deletedMinMsgLen, "DELETED")) return false;
+			if(!validateDeleted(fields)) return false;
+			return true;
+			
 		// RESTORE protocol initiator message
 		case "GETCHUNK":
 			
@@ -377,6 +400,20 @@ public class ServiceMessage {
 		return validate;
 	}
 
+	/**
+	 * Validates a DELETED message and returns whether it's valid.
+	 * 
+	 * @param fields the header fields
+	 * @return whether the DELETED message is valid
+	 */
+	private boolean validateDeleted(String[] fields) {
+		
+		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI])
+				&& validateHash(fields[hashI]);
+		
+		return validate;
+	}
+	
 	/**
 	 * Validates a GETCHUNK message and returns whether it's valid.
 	 * 

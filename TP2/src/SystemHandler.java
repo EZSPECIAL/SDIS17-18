@@ -1,6 +1,7 @@
 import java.io.File;
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -21,7 +22,7 @@ public class SystemHandler implements Runnable {
 		
 		try {
 			runProtocol(this.packet);
-		} catch(IOException | InterruptedException e) {
+		} catch(IOException | InterruptedException | NoSuchAlgorithmException e) {
 			SystemManager.getInstance().logPrint("I/O Exception or thread interruption on receiver!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
 			return;
@@ -31,9 +32,9 @@ public class SystemHandler implements Runnable {
 	/**
 	 * Runs a specific protocol based on the protocol field of a service message.
 	 * 
-	 * @param packet the packet containing the system message
+	 * @param packet the packet containing the system message 
 	 */
-	public void runProtocol(DatagramPacket packet) throws IOException, InterruptedException {
+	public void runProtocol(DatagramPacket packet) throws IOException, InterruptedException, NoSuchAlgorithmException {
 		
 		// Validate message as service message and extract its header
 		ProtocolState state = new ProtocolState(new ServiceMessage());
@@ -63,6 +64,12 @@ public class SystemHandler implements Runnable {
 		case "DELETE":
 			
 			this.handleDelete(peer, state);
+			break;
+			
+		// DELETE protocol response for enhanced DELETE
+		case "DELETED":
+			
+			this.handleDeleted(peer, state);
 			break;
 			
 		// RESTORE protocol initiated
@@ -140,7 +147,7 @@ public class SystemHandler implements Runnable {
 			SystemManager.getInstance().logPrint("added peer ID \"" + senderID + "\" to responded for chunk " + currChunk, SystemManager.LogLevel.DEBUG);
 		}
 
-		// Check if the desired unique STORED messages have arrived and flag it if so
+		// Print the current status
 		int responseCount = currState.getRespondedID().get(currChunk).size();
 		int desiredCount = currState.getDesiredRepDeg();
 		
@@ -154,7 +161,7 @@ public class SystemHandler implements Runnable {
 	 * @param peer the singleton Peer instance
 	 * @param state the Protocol State object relevant to this operation
 	 */
-	private void handleDelete(Peer peer, ProtocolState state) {
+	private void handleDelete(Peer peer, ProtocolState state) throws NoSuchAlgorithmException, IOException {
 		
 	    //Update database
 	    peer.getDatabase().deleteUpdate(state);
@@ -179,9 +186,41 @@ public class SystemHandler implements Runnable {
 	    
 	    // Delete chunk folder
 	    folder.delete();
+	    
 	    SystemManager.getInstance().logPrint("deleted: " + state.getFields()[Peer.hashI], SystemManager.LogLevel.NORMAL);
 	    
-
+	    if(peer.getProtocolVersion().equals("1.0")) return;
+	    
+	    // Reply with DELETED if running enhanced version
+	    ProtocolState responseState = new ProtocolState(new ServiceMessage());
+	    responseState.initDeleteResponseState(peer.getProtocolVersion(), state.getFields()[Peer.hashI]);
+	    
+	    byte[] msg = state.getParser().createDeletedMsg(peer.getPeerID(), responseState);
+	    peer.getMcc().send(msg);
+	}
+	
+	/**
+	 * Handles the responses to an enhanced DELETE protocol by counting the unique DELETED responses
+	 * up to the expected number of responses.
+	 *
+	 * @param peer the singleton Peer instance
+	 * @param state the Protocol State object relevant to this operation
+	 */
+	private void handleDeleted(Peer peer, ProtocolState state) {
+		
+		// Check if this DELETE protocol exists
+		String protocolKey = peer.getPeerID() + state.getFields()[Peer.hashI] + ProtocolState.ProtocolType.DELETE.name();
+		ProtocolState currState = peer.getProtocols().get(protocolKey);
+		if(currState == null) {
+			SystemManager.getInstance().logPrint("received DELETED but no protocol matched, key: " + protocolKey, SystemManager.LogLevel.DEBUG);
+			return;
+		}
+		
+		// Add sender ID to set of peer IDs that have responded to this deletion
+		int senderID = Integer.parseInt(state.getFields()[Peer.senderI]);
+		if(currState.getRespondedID().get(0L).add(senderID)) {
+			SystemManager.getInstance().logPrint("added peer ID \"" + senderID + "\" to responded", SystemManager.LogLevel.DEBUG);
+		}
 	}
 	
 	/**
