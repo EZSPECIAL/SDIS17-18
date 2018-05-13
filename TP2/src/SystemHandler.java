@@ -132,19 +132,20 @@ public class SystemHandler implements Runnable {
 			SystemManager.getInstance().logPrint("received STORED but no protocol matched, key: " + protocolKey, SystemManager.LogLevel.DEBUG);
 			return;
 		}
-
-		// Add sender ID to set of peer IDs that have responded
-		if(currState.getRespondedID().add(Integer.parseInt(state.getFields()[Peer.senderI])))
-			SystemManager.getInstance().logPrint("added peer ID \"" + state.getFields()[Peer.senderI] + "\" to responded", SystemManager.LogLevel.DEBUG);
 		
+		// Add sender ID to set of peer IDs that have responded to this chunk's backup
+		int senderID = Integer.parseInt(state.getFields()[Peer.senderI]);
+		long currChunk = Long.parseLong(state.getFields()[Peer.chunkNoI]);
+		if(currState.getRespondedID().get(currChunk).add(senderID)) {
+			SystemManager.getInstance().logPrint("added peer ID \"" + senderID + "\" to responded for chunk " + currChunk, SystemManager.LogLevel.DEBUG);
+		}
+
 		// Check if the desired unique STORED messages have arrived and flag it if so
-		int responseCount = currState.getRespondedID().size();
+		int responseCount = currState.getRespondedID().get(currChunk).size();
 		int desiredCount = currState.getDesiredRepDeg();
 		
-		String respondedMsg = responseCount + " / " + desiredCount + " unique peers have responded";
+		String respondedMsg = responseCount + " / " + desiredCount + " unique peers for chunk " + currChunk;
 		SystemManager.getInstance().logPrint(respondedMsg, SystemManager.LogLevel.DEBUG);
-
-		if(responseCount >= desiredCount) currState.setStoredCountCorrect(true);
 	}
 
 	/**

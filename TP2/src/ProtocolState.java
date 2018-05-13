@@ -36,11 +36,9 @@ public class ProtocolState {
 	private String hashHex;
 	
 	// Fields used for protocol logic
-	private int attempts;
-	private HashSet<Integer> respondedID = new HashSet<Integer>();
-	private boolean isStoredCountCorrect = false;
 	private boolean isChunkMsgAlreadySent = false;
 	private boolean isPutchunkMsgAlreadySent = false;
+	private ConcurrentHashMap<Long, HashSet<Integer>> respondedID = new ConcurrentHashMap<Long, HashSet<Integer>>(8, 0.9f, 1);
 	private ConcurrentHashMap<Long, byte[]> restoredChunks = new ConcurrentHashMap<Long, byte[]>(8, 0.9f, 1);
 	
 	private boolean isFinished;
@@ -94,7 +92,10 @@ public class ProtocolState {
 		this.filename = file.getName();
 		this.hashHex = computeSHA256(filepath);
 		
-		this.attempts = 0;
+		// Fill hash map of peer responses
+		for(long i = 0; i < this.chunkTotal; i++) {
+			this.respondedID.put(i, new HashSet<Integer>());
+		}
 		
 		return true;
 	}
@@ -129,8 +130,6 @@ public class ProtocolState {
 		File file = new File(filepath);
 		this.filename = file.getName();
 		this.hashHex = computeSHA256(filepath);
-		
-		this.attempts = 0;
 	}
 	
 	/**
@@ -154,9 +153,7 @@ public class ProtocolState {
 		File file = new File(filepath);
 		this.filename = file.getName();
 		this.hashHex = computeSHA256(filepath);
-		
-		this.attempts = 0;
-		
+
 		return true;
 	}
 	
@@ -258,30 +255,13 @@ public class ProtocolState {
 	}
 	
 	/**
-	 * Resets the hash set of unique Peer IDs that have responded to a message and its flag.
-	 */
-	public void resetStoredCount() {
-		
-		this.respondedID = new HashSet<Integer>();
-		this.attempts = 0;
-		this.isStoredCountCorrect = false;
-	}
-
-	/**
 	 * Increments current chunk number being processed by 1 and sets isFinished field if last chunk
 	 */
 	public void incrementCurrentChunkNo() {
 		this.currentChunkNo++;
 		if(this.chunkTotal == this.currentChunkNo) this.isFinished = true;
 	}
-	
-	/**
-	 * @param attempts increments the number of attempts for this protocol instance
-	 */
-	public void incrementAttempts() {
-		this.attempts++;
-	}
-	
+
 	/**
 	 * @return the protocol type enumerator
 	 */
@@ -374,16 +354,9 @@ public class ProtocolState {
 	}
 
 	/**
-	 * @return the number of attempts for this protocol instance
+	 * @return the hash map of unique Peer IDs that have responded to a certain chunkNo message
 	 */
-	public int getAttempts() {
-		return attempts;
-	}
-	
-	/**
-	 * @return the hash set of unique Peer IDs that have responded to a message
-	 */
-	public HashSet<Integer> getRespondedID() {
+	public ConcurrentHashMap<Long, HashSet<Integer>> getRespondedID() {
 		return respondedID;
 	}
 
@@ -399,13 +372,6 @@ public class ProtocolState {
 	 */
 	public void setPacket(DatagramPacket packet) {
 		this.packet = packet;
-	}
-	
-	/**
-	 * @return whether the number of STORED responses is enough for the desired replication degree
-	 */
-	public boolean isStoredCountCorrect() {
-		return isStoredCountCorrect;
 	}
 
 	/**
@@ -434,13 +400,6 @@ public class ProtocolState {
 	 */
 	public boolean isFinished() {
 		return isFinished;
-	}
-	
-	/**
-	 * @param whether the number of STORED responses is enough for the desired replication degree
-	 */
-	public void setStoredCountCorrect(boolean isStoredCountCorrect) {
-		this.isStoredCountCorrect = isStoredCountCorrect;
 	}
 	
 	/**

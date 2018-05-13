@@ -66,6 +66,32 @@ public class ServiceMessage {
 		if(nRead <= 0) return header.getBytes();
 		else return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
 	}
+	
+	// TODO merge
+	/**
+	 * Returns a service message with the following format: "PUTCHUNK &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt; &lt;ChunkNo&gt; &lt;ReplicationDegree&gt;".
+	 * 
+	 * @param peerID the numeric identifier of the sending Peer
+	 * @param state the Protocol State object relevant to this operation
+	 * @return the binary data representing the message
+	 */
+	public byte[] createPutchunkMsg(int peerID, ProtocolState state, Long chunkNo) throws IOException {
+
+		// Get binary file data
+	    byte[] buf = new byte[dataSize];
+		int nRead = this.getData(state.getFilepath(), chunkNo, buf);
+		
+        String readMsg = "putchunk nRead: " + nRead;
+        SystemManager.getInstance().logPrint(readMsg, SystemManager.LogLevel.VERBOSE);
+	    
+	    // Merge header and body to single byte[]
+        String header = "PUTCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + chunkNo + " " + state.getDesiredRepDeg() + headerTermination;
+	    		
+        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
+		
+		if(nRead <= 0) return header.getBytes();
+		else return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
+	}
 
 	/**
 	 * Returns a service message with the following format: "STORED &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt; &lt;ChunkNo&gt;".

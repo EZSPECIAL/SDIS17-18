@@ -1,10 +1,19 @@
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class BackupProtocol implements Runnable {
 
+	private static final int executorThreadsMax = 5;
+	
 	private String filepath;
 	private int repDeg;
+	private boolean notEnoughResponses = false;
+	private ExecutorService executor = Executors.newFixedThreadPool(executorThreadsMax);
+	private HashSet<Future<?>> tasks = new HashSet<Future<?>>();
 	
 	/**
 	 * Runs a BACKUP protocol procedure with specified filepath and replication degree.
@@ -44,18 +53,28 @@ public class BackupProtocol implements Runnable {
 
 		ProtocolState state = peer.getProtocols().get(key);
 		
-		// PUTCHUNK message loop
-		try {
-			if(this.putchunkLoop(peer, state)) SystemManager.getInstance().logPrint("finished " + backMsg, SystemManager.LogLevel.NORMAL);
-			else SystemManager.getInstance().logPrint("failed " + backMsg + ", replication degree lower than desired", SystemManager.LogLevel.NORMAL);
-		} catch(InterruptedException | IOException e) {
-			SystemManager.getInstance().logPrint("I/O Exception or thread interruption on backup protocol!", SystemManager.LogLevel.NORMAL);
-			e.printStackTrace();
-			peer.getProtocols().remove(key);
-			SystemManager.getInstance().logPrint("key removed: " + key, SystemManager.LogLevel.VERBOSE);
-			return;
+		// Submit threads for running a PUTCHUNK message for the current chunk
+		while(!state.isFinished()) {
+		
+			// Wait if no slot available in thread pool
+			while(this.tasks.size() >= BackupProtocol.executorThreadsMax) {
+				this.tasks.removeIf(t -> t.isDone());
+			}
+
+			Future<?> task = this.executor.submit(new BackupProtocolMsgLoop(peer, state, state.getCurrentChunkNo(), this));
+			this.tasks.add(task);
+			state.incrementCurrentChunkNo();
 		}
 		
+		// Wait until all threads complete
+		while(this.tasks.size() != 0) {
+			this.tasks.removeIf(t -> t.isDone());
+		}
+		
+		if(!this.notEnoughResponses) SystemManager.getInstance().logPrint("finished " + backMsg, SystemManager.LogLevel.NORMAL);
+		else SystemManager.getInstance().logPrint("failed " + backMsg + ", replication degree lower than desired", SystemManager.LogLevel.NORMAL);
+
+		peer.getDatabase().backupUpdate(state);
 		peer.getProtocols().remove(key);
 		SystemManager.getInstance().logPrint("key removed: " + key, SystemManager.LogLevel.VERBOSE);
 	}
@@ -80,40 +99,9 @@ public class BackupProtocol implements Runnable {
 	}
 
 	/**
-	 * Sends the required PUTCHUNK messages for backing up a file and waits for the reception of repDeg STORED
-	 * messages in response to each PUTCHUNK.
-	 * 
-	 * @param peer the singleton Peer instance
-	 * @param state the Protocol State object relevant to this operation
-	 * @return whether the backup was successful
+	 * @param notEnoughResponses whether enough responses were received for this backup protocol
 	 */
-	private boolean putchunkLoop(Peer peer, ProtocolState state) throws InterruptedException, IOException {
-		
-		boolean valid = true;
-		
-		while(!state.isFinished()) {
-			
-			// Prepare and send next PUTCHUNK message
-			byte[] msg = state.getParser().createPutchunkMsg(peer.getPeerID(), state);
-			peer.getMdb().send(msg);
-
-			int timeoutMS = (int) (Peer.baseTimeoutMS * Math.pow(2, state.getAttempts()));
-			Thread.sleep(timeoutMS);
-			state.incrementAttempts();
-			
-			// Check if expected unique STORED messages were received
-			if(state.isStoredCountCorrect() || state.getAttempts() >= Peer.maxAttempts) {
-				
-				if(state.getAttempts() >= Peer.maxAttempts) valid = false;
-				
-				// Update database with initiated chunk
-				peer.getDatabase().backupUpdate(state);
-				
-				state.incrementCurrentChunkNo();
-				state.resetStoredCount();
-			} else SystemManager.getInstance().logPrint("not enough STORED messages whithin " + timeoutMS + "ms", SystemManager.LogLevel.DEBUG);
-		}
-
-		return valid;
+	public void setNotEnoughResponses(boolean notEnoughResponses) {
+		this.notEnoughResponses = notEnoughResponses;
 	}
 }

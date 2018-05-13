@@ -69,7 +69,7 @@ public class ServiceChannel implements Runnable {
 
 		DatagramPacket packet = new DatagramPacket(data, data.length, this.addr, this.port);
 
-		String sent = "sending packets on " + this.channelName;
+		String sent = "sending packets on \"" + this.channelName + "\"";
 		SystemManager.getInstance().logPrint(sent, SystemManager.LogLevel.DEBUG);
 
 		this.socket.send(packet);

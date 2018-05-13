@@ -1,13 +1,15 @@
 import java.net.DatagramPacket;
+import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.Future;
 
 public class ServiceChannelHandler implements Runnable {
 
 	private static final int executorThreadsMax = 15;
 
 	private ExecutorService executor = Executors.newFixedThreadPool(executorThreadsMax);
+	private HashSet<Future<?>> tasks = new HashSet<Future<?>>();
 	private String channelName;
 	private ServiceChannel channel;
 	
@@ -31,16 +33,19 @@ public class ServiceChannelHandler implements Runnable {
 			DatagramPacket packet;
 			try {
 				packet = this.channel.getMessages().take();
-			} catch (InterruptedException e) {
+			} catch(InterruptedException e) {
 				SystemManager.getInstance().logPrint("handler thread interrupted!", SystemManager.LogLevel.NORMAL);
 				e.printStackTrace();
 				return;
 			}
 			
 			// Wait if no slot available in thread pool
-			while(((ThreadPoolExecutor) executor).getActiveCount() == ServiceChannelHandler.executorThreadsMax);
+			while(this.tasks.size() >= ServiceChannelHandler.executorThreadsMax) {
+				this.tasks.removeIf(t -> t.isDone());
+			}
 			
-			executor.submit(new SystemHandler(packet, this.channelName));
+			Future<?> task = executor.submit(new SystemHandler(packet, this.channelName));
+			this.tasks.add(task);
 		}
 	}
 }

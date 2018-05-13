@@ -74,9 +74,8 @@ public class SystemDatabase {
 	}
 	
 	/**
-	 * Updates the database with the initiated backup. Inserts new file info
-	 * and current chunk info. If file info already exists updates the file path and if
-	 * chunk already exists updates desired replication degree.
+	 * Updates the database with the initiated backup. Inserts new file info.
+	 * If file info already exists updates the file path and desired replication degree.
 	 * 
 	 * @param state the Protocol State object relevant to this operation
 	 */
