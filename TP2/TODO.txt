@@ -1,6 +1,5 @@
 
-    - File hash include first bytes / remove accessed date
-    - RESTORE protocol, don't keep chunks in RAM
+
 
 ---------------------
 ENHANCEMENTS
@@ -52,12 +51,13 @@ CONSISTENCY
 FAULT-TOLERANCE
 ---------------------
 
-    - save / load DB (use Serializable)
+    - save / load DB (use Serializable / addShutdownHook)
     - add file metadata to DB
 
 ---------------------
 EXTRAS
 ---------------------
 
+    - file hash, add initial bytes
     - edit msg: add a new header line / protocol version != 1.0
     - every protocol playing nice with each other (prevent same peer same protocol same file)

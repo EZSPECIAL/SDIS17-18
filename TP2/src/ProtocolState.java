@@ -224,7 +224,7 @@ public class ProtocolState {
 
 	/**
 	 * Computes a SHA256 hash based on the specified file path. The function uses the file's
-	 * filename, last modified date and last accessed date to add more uniqueness to the hash.
+	 * filename and last modified date to add more uniqueness to the hash.
 	 * 
 	 * @param filepath the file path to use as base for the hash
 	 * @return textual representation of the hexadecimal values of the SHA256
@@ -234,10 +234,9 @@ public class ProtocolState {
 		File file = new File(filepath);
 		Path attrRead = Paths.get(filepath);
 
-		// Get file's last modified and access times to build a string for hashing
+		// Get file metadata for hashing
 	    String modify = Files.getAttribute(attrRead, "lastModifiedTime").toString();
-	    String access = Files.getAttribute(attrRead, "lastAccessTime").toString();
-		String toHash = file.getName() + modify + access;
+		String toHash = file.getName() + modify;
 		
         String beforeHash = "string to hash: " + toHash;
         SystemManager.getInstance().logPrint(beforeHash, SystemManager.LogLevel.VERBOSE);

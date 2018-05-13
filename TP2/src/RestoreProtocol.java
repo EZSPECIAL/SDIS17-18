@@ -14,7 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RestoreProtocol implements Runnable {
 
 	private static final int consecutiveMsgCount = 5;
+	
 	private String filepath;
+	private String restoredFilepath;
+	private long receivedChunks = 0;
 	
 	/**
 	 * Runs a RESTORE protocol procedure with specified filepath.
@@ -51,11 +54,19 @@ public class RestoreProtocol implements Runnable {
 		}
 		
 		ProtocolState state = peer.getProtocols().get(key);
-		
+
 		// GETCHUNK message loop
 		try {
-			if(this.getchunkLoop(peer, state)) SystemManager.getInstance().logPrint("finished " + resMsg, SystemManager.LogLevel.NORMAL);
-			else {
+			
+			this.createRestoredPath(peer, state);
+			
+			if(this.getchunkLoop(peer, state)) {
+				SystemManager.getInstance().logPrint("finished " + resMsg, SystemManager.LogLevel.NORMAL);
+			} else {
+				
+				// Delete partial file
+				this.deleteRestoredFile(peer, state);
+				
 				SystemManager.getInstance().logPrint("not enough chunk data received", SystemManager.LogLevel.DEBUG);
 				SystemManager.getInstance().logPrint("failed " + resMsg, SystemManager.LogLevel.NORMAL);
 			}
@@ -115,10 +126,12 @@ public class RestoreProtocol implements Runnable {
 			}
 			
 			if(!checkReceivedChunks(state)) return false;
+			
+			// Write file as chunks arrive and reset hash map
+			this.writeRestoredChunks(peer, state);
+			state.setRestoredChunks(new ConcurrentHashMap<Long, byte[]>(8, 0.9f, 1));
 		}
-		
-		// Wait until all CHUNK messages arrive and then write file
-		this.writeRestoredChunks(peer, state);
+
 		return true;
 	}
 	
@@ -132,25 +145,49 @@ public class RestoreProtocol implements Runnable {
 	private boolean checkReceivedChunks(ProtocolState state) {
 		
 		ConcurrentHashMap<Long, byte[]> chunks;
+		
+		// Find the chunk limit for this batch
+		long diff = state.getChunkTotal() - this.receivedChunks;
+		long limit = (diff > RestoreProtocol.consecutiveMsgCount) ? RestoreProtocol.consecutiveMsgCount : diff;
+		
 		do {
 			if(Thread.interrupted()) return false;
 			chunks = state.getRestoredChunks();
-		} while(chunks.size() < state.getCurrentChunkNo());
+		} while(chunks.size() < limit);
 		
+		this.receivedChunks += limit;
 		return true;
 	}
 	
 	/**
-	 * Writes a set of chunk data to a single file. The file path is fixed and is based on the filename and PeerID.
+	 * Writes a set of chunk data to a single file using the file path created previously.
 	 * 
 	 * @param peer the singleton Peer instance
 	 * @param state the Protocol State object relevant to this operation
-	 * @return whether the restore was successful
 	 */
 	private void writeRestoredChunks(Peer peer, ProtocolState state) throws IOException {
 		
 		ConcurrentHashMap<Long, byte[]> chunks = state.getRestoredChunks();
 
+		// Append binary data to form restored file
+		File chunk = new File(this.restoredFilepath);
+		FileOutputStream output = new FileOutputStream(chunk, true);
+		for(Map.Entry<Long, byte[]> entry : chunks.entrySet()) {
+			output.write(entry.getValue());
+		}
+		output.close();
+		
+		SystemManager.getInstance().logPrint("restored " + chunks.size() + " chunks", SystemManager.LogLevel.VERBOSE);
+	}
+	
+	/**
+	 * Creates the file path for restoring a file.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @param state the Protocol State object relevant to this operation
+	 */
+	private void createRestoredPath(Peer peer, ProtocolState state) throws IOException {
+		
 		// Create filepaths for restored file
 		String folderPath = "../" + Peer.restoredFolderName;
 		String[] split = state.getFilename().split("[.]");
@@ -168,17 +205,22 @@ public class RestoreProtocol implements Runnable {
 			split[split.length - 2] = split[split.length - 2] + Peer.restoredSuffix + "_" + peer.getPeerID();
 			restoredFilepath = folderPath + "/" + dateString + " - " + String.join(".", split);
 		}
+
+		peer.createDirIfNotExists(folderPath);
+		this.restoredFilepath = restoredFilepath;
 		
 		SystemManager.getInstance().logPrint("restoring file in \"" + restoredFilepath + "\"", SystemManager.LogLevel.DEBUG);
+	}
+	
+	/**
+	 * Deletes a restored file using the file path created previously.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @param state the Protocol State object relevant to this operation
+	 */
+	private void deleteRestoredFile(Peer peer, ProtocolState state) {
 		
-		// Append all binary data to form restored file
-		peer.createDirIfNotExists(folderPath);
-
-		File chunk = new File(restoredFilepath);
-		FileOutputStream output = new FileOutputStream(chunk, true);
-		for(Map.Entry<Long, byte[]> entry : chunks.entrySet()) {
-			output.write(entry.getValue());
-		}
-		output.close();
+		File restored = new File(this.restoredFilepath);
+		if(restored.exists()) restored.delete();
 	}
 }

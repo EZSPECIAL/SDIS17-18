@@ -5,7 +5,9 @@ CHANGELOG
 ---------------------
 
     - Messages are put into queues for higher scalibility and lower probability of dropping messages
-    - Backup PUTCHUNK message is now sent using multiple threads instead of sequentially sending, each thread runs the timeout and waits for the desired STORED message count
+    - Backup PUTCHUNK message is now sent using multiple threads instead of sequentially, each thread runs the timeout and waits for the desired STORED message count
+    - Restore protocol no longer keeps chunks in RAM, writes batches of chunks as they arrive
+    - File hash no longer uses accessed date, currently uses filename + last modified date
 
 ---------------------
 RUNNING
