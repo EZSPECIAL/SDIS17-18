@@ -55,7 +55,7 @@ public class InfoProtocol implements Runnable {
 				
 				SystemManager.getInstance().simpleLog("STORED CHUNK", SystemManager.LogLevel.NORMAL);
 				SystemManager.getInstance().simpleLog("\tid: " + chunk.getId(), SystemManager.LogLevel.NORMAL);
-				SystemManager.getInstance().simpleLog("\tperceived repDeg: " + chunk.getPerceivedRepDeg().size(), SystemManager.LogLevel.NORMAL);
+				this.printPerceivedRepDeg(chunk.getPerceivedRepDeg());
 				SystemManager.getInstance().simpleLog("\tdesired repDeg: " + chunk.getDesiredRepDeg(), SystemManager.LogLevel.NORMAL);
 				SystemManager.getInstance().simpleLog("\tsize: " + chunk.getSize() + "KB", SystemManager.LogLevel.NORMAL);
 			}
@@ -79,9 +79,28 @@ public class InfoProtocol implements Runnable {
 
 				SystemManager.getInstance().simpleLog("SYSTEM CHUNK", SystemManager.LogLevel.NORMAL);
 				SystemManager.getInstance().simpleLog("\tid: " + chunk.getId(), SystemManager.LogLevel.NORMAL);
-				SystemManager.getInstance().simpleLog("\tperceived repDeg: " + chunk.getPerceivedRepDeg().size(), SystemManager.LogLevel.NORMAL);
+				this.printPerceivedRepDeg(chunk.getPerceivedRepDeg());
 			}
 		}
+	}
+	
+	/**
+	 * Prints the peers that the current Peer believes to have a specific chunk.
+	 * 
+	 * @param peers the peers that have this chunk
+	 */
+	private void printPerceivedRepDeg(ConcurrentHashMap<Integer, Integer> peers) {
+		
+		// Print which Peer IDs this Peer believes to have the chunk
+		String perceivedRepDeg = "\tperceived repDeg: " + peers.size();
+
+		if(peers.size() > 0) perceivedRepDeg += " (";
+		for(Map.Entry<Integer, Integer> peerIDs : peers.entrySet()) {
+			perceivedRepDeg += " " + peerIDs.getKey();
+		}
+		if(peers.size() > 0) perceivedRepDeg += " )";
+		
+		SystemManager.getInstance().simpleLog(perceivedRepDeg, SystemManager.LogLevel.NORMAL);
 	}
 
 	/**

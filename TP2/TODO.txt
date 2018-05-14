@@ -1,8 +1,5 @@
 
-    - fix ENH BACKUP bug (not sending STORED if already stored)
-    - add which peers have file to STATE
-    - fix pending delete filename
-    - fix stray entries in filesToDelete database
+    - RESTORE ENH (different version test / multiple peers same file)
 
 ---------------------
 ENHANCEMENTS
@@ -44,7 +41,7 @@ SCALABILITY
 FAULT-TOLERANCE
 ---------------------
 
-    - restore even without original file (add file metadata to DB / force restore only on initiators?)
+    - restore even without original file (add file metadata to DB / RETRIEVE message / force restore only on initiators?)
 
 ---------------------
 EXTRAS

@@ -229,7 +229,10 @@ public class SystemDatabase implements Serializable, Runnable {
 		if(fileHashes == null) return;
 			
 		fileHashes.remove(hash);
-		this.filesToDelete.put(peer, fileHashes);
+		
+		// Update files to delete or remove it if no pending deletions remain
+		if(fileHashes.size() == 0) this.filesToDelete.remove(peer);
+		else this.filesToDelete.put(peer, fileHashes);
 		
 	    SystemManager.getInstance().logPrint("removed hash " + hash + " as needing deletion for Peer " + peer, SystemManager.LogLevel.DATABASE);
 	}

@@ -167,16 +167,17 @@ public class TimeoutHandler implements Runnable {
 		byte[] msg = this.state.getParser().createStoredMsg(peer.getPeerID(), this.state);
 		peer.getMcc().send(msg);
 	}
-	
+
 	/**
 	 * Handles enhanced BACKUP protocol by checking if desired replication degree has
-	 * already been met by other Peers.
+	 * already been met by other Peers. Sends STORED response in case Peer already stores
+	 * the chunk.
 	 * 
 	 * @param peer the singleton Peer instance
 	 * @param state the Protocol State object relevant to this operation
-	 * @return whether storing of chunk data should be aborted along with response message
+	 * @return whether storing of chunk data should be aborted
 	 */
-	private boolean handleEnhancedBackup(Peer peer, ProtocolState state) {
+	private boolean handleEnhancedBackup(Peer peer, ProtocolState state) throws IOException {
 	    
 		String hashKey = state.getFields()[Peer.hashI];
 		long chunkHashkey = Long.parseLong(state.getFields()[Peer.chunkNoI]);
@@ -203,8 +204,39 @@ public class TimeoutHandler implements Runnable {
 		chunk.setDesiredRepDeg(desiredRepDeg);
 		
 		SystemManager.getInstance().logPrint("perceived " + perceivedRepDeg + " chunk copies out of " + desiredRepDeg + " desired", SystemManager.LogLevel.DEBUG);
-		if(perceivedRepDeg >= desiredRepDeg) return true;
-		else return false;
+
+		if(perceivedRepDeg >= desiredRepDeg) {
+			
+		    // Check if chunk is stored on this Peer
+		    String chunkPath = this.getChunkPath(peer, state);
+		    File file = new File(chunkPath);
+		    if(file.exists() && file.isFile()) {
+		    	
+			    this.state.initBackupResponseState(peer.getProtocolVersion(), this.state.getFields()[Peer.hashI], this.state.getFields()[Peer.chunkNoI]);
+				
+				byte[] msg = this.state.getParser().createStoredMsg(peer.getPeerID(), this.state);
+				peer.getMcc().send(msg);
+		    }
+			
+			return true;
+		} else return false;
+	}
+
+	/**
+	 * Returns where a chunk should be stored using the current Peer and ProtocolState.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @param state the Protocol State object relevant to this operation
+	 * @return the chunk path
+	 */
+	private String getChunkPath(Peer peer, ProtocolState state) {
+	
+	    String storageFolder = "../" + Peer.storageFolderName;
+		String peerFolder = storageFolder + "/" + Peer.peerFolderPrefix + peer.getPeerID();
+	    String chunkFolder = peerFolder + "/" + this.state.getFields()[Peer.hashI];
+	    String chunkPath = chunkFolder + "/" + this.state.getFields()[Peer.chunkNoI];
+		
+	    return chunkPath;
 	}
 	
 	/**

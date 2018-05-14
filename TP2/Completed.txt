@@ -14,6 +14,8 @@ CHANGELOG
         - added DELETED confirmation message
         - if the expected DELETED confirmations do not arrive, Peer stores the remaining Peers in the database
         - when a Peer starts it sends a STARTED message which triggers any pending deletions
+    - Fixed bug with BACKUP ENH, now sends STORED message even if it perceives that the replication degree has been met
+    - TestApp STATE now prints which Peer IDs the Peer perceives to own the chunk
 
 ---------------------
 RUNNING

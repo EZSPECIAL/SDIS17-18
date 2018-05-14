@@ -102,7 +102,7 @@ public class DeleteProtocol implements Runnable {
 	 */
 	public void enhancedDelete(Peer peer) throws IOException, InterruptedException, NoSuchAlgorithmException {
 		
-		String delMsg = "delete enh: " + filepath;
+		String delMsg = this.pendingDelete ? "pending delete: " + this.hash : "delete enh: " + filepath;
 		SystemManager.getInstance().logPrint("started " + delMsg, SystemManager.LogLevel.NORMAL);
 		
 		// Initialise protocol state

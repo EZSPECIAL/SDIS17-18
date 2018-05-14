@@ -55,10 +55,6 @@ public class TestApp {
 			
 			runBackup(args[opnd1I], parseRepDeg(args[opnd2I]));
 			break;
-			
-		case "backupenh":
-			// TODO remote method, confirm protocol version
-			break;
 
 		// Validate filepath and run remote restore method
 		case "restore":
@@ -69,10 +65,6 @@ public class TestApp {
 			runRestore(args[opnd1I]);
 			break;
 			
-		case "restoreenh":
-			// TODO remote method, confirm protocol version
-			break;
-			
 		// Validate filepath and run remote delete method
 		case "delete":
 			
@@ -81,11 +73,7 @@ public class TestApp {
 
 			runDelete(args[opnd1I]);
 			break;
-			
-		case "deleteenh":
-			// TODO remote method, confirm protocol version
-			break;
-			
+
 		// Validate max disk space parameter and run remote reclaim method
 		case "reclaim":
 			
