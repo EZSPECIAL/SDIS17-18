@@ -129,6 +129,9 @@ public class Peer implements RMITesting {
 		new Thread(null, this.mdr, "recovery channel").start();
 		
 		this.initRMI();
+		
+		byte[] msg = new ServiceMessage().createStarted(this.peerID, this.protocolVersion);
+		this.mcc.send(msg);
 	}
 	
 	/**

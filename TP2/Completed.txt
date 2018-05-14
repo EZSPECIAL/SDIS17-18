@@ -10,6 +10,10 @@ CHANGELOG
     - File hash no longer uses accessed date, currently uses filename + last modified date
     - Database is saved periodically and on shutdown
     - Database is loaded if it exists
+    - DELETE ENH
+        - added DELETED confirmation message
+        - if the expected DELETED confirmations do not arrive, Peer stores the remaining Peers in the database
+        - when a Peer starts it sends a STARTED message which triggers any pending deletions
 
 ---------------------
 RUNNING

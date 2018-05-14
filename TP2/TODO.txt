@@ -1,5 +1,8 @@
 
-    - DELETE ENH add WAKEUP message and run pending deletions
+    - fix ENH BACKUP bug (not sending STORED if already stored)
+    - add which peers have file to STATE
+    - fix pending delete filename
+    - fix stray entries in filesToDelete database
 
 ---------------------
 ENHANCEMENTS

@@ -2,6 +2,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -89,6 +90,12 @@ public class SystemHandler implements Runnable {
 			
 			this.handleRemoved(peer, state);
 			break;
+			
+		// Peer started message for DELETE protocol enhancement
+		case "STARTED":
+			
+			this.handleStarted(peer, state);
+			break;
 		}
 	}
 
@@ -171,23 +178,24 @@ public class SystemHandler implements Runnable {
 	    String chunkFolder = peerFolder + "/" + state.getFields()[Peer.hashI];
 	    
 	    File folder = new File(chunkFolder);
+	    
 	    if(!folder.exists()) {
 		    SystemManager.getInstance().logPrint("don't have the file, ignoring message", SystemManager.LogLevel.DEBUG);
-	    	return;
-	    }
+	    } else {
 
-	    // Get all chunks and delete them
-	    File[] chunks = folder.listFiles();
-	    SystemManager.getInstance().logPrint("chunks to delete: " + chunks.length, SystemManager.LogLevel.DEBUG);
-	    
-	    for(File chunk : chunks) {
-	    	chunk.delete();
+	    	// Get all chunks and delete them
+	    	File[] chunks = folder.listFiles();
+	    	SystemManager.getInstance().logPrint("chunks to delete: " + chunks.length, SystemManager.LogLevel.DEBUG);
+
+	    	for(File chunk : chunks) {
+	    		chunk.delete();
+	    	}
+
+	    	// Delete chunk folder
+	    	folder.delete();
+
+	    	SystemManager.getInstance().logPrint("deleted: " + state.getFields()[Peer.hashI], SystemManager.LogLevel.NORMAL);
 	    }
-	    
-	    // Delete chunk folder
-	    folder.delete();
-	    
-	    SystemManager.getInstance().logPrint("deleted: " + state.getFields()[Peer.hashI], SystemManager.LogLevel.NORMAL);
 	    
 	    if(peer.getProtocolVersion().equals("1.0")) return;
 	    
@@ -208,12 +216,21 @@ public class SystemHandler implements Runnable {
 	 */
 	private void handleDeleted(Peer peer, ProtocolState state) {
 		
-		// Check if this DELETE protocol exists
-		String protocolKey = peer.getPeerID() + state.getFields()[Peer.hashI] + ProtocolState.ProtocolType.DELETE.name();
-		ProtocolState currState = peer.getProtocols().get(protocolKey);
+		// Check if pending DELETE protocol exists
+		String pendingDeleteKey = peer.getPeerID() + state.getFields()[Peer.hashI] + ProtocolState.ProtocolType.DELETE.name() + state.getFields()[Peer.senderI];
+		ProtocolState currState = peer.getProtocols().get(pendingDeleteKey);
+		
 		if(currState == null) {
-			SystemManager.getInstance().logPrint("received DELETED but no protocol matched, key: " + protocolKey, SystemManager.LogLevel.DEBUG);
-			return;
+			
+			SystemManager.getInstance().logPrint("received DELETED but no pending delete matched, key: " + pendingDeleteKey, SystemManager.LogLevel.DEBUG);
+			
+			// Check if DELETE protocol exists
+			String protocolKey = peer.getPeerID() + state.getFields()[Peer.hashI] + ProtocolState.ProtocolType.DELETE.name();
+			currState = peer.getProtocols().get(protocolKey);
+			if(currState == null) {
+				SystemManager.getInstance().logPrint("received DELETED but no protocol matched, key: " + protocolKey, SystemManager.LogLevel.DEBUG);
+				return;
+			}
 		}
 		
 		// Add sender ID to set of peer IDs that have responded to this deletion
@@ -317,5 +334,38 @@ public class SystemHandler implements Runnable {
 	    }
 	    
 	    peer.getExecutor().schedule(new TimeoutHandler(state, ProtocolState.ProtocolType.RECLAIM, this.channelName, protocolKey, desiredRepDeg), waitTimeMS, TimeUnit.MILLISECONDS);
+	}
+
+	/**
+	 * Handles pending DELETE protocol by checking if the started Peer has pending deletions
+	 * on this Peer. Starts a new DELETE for each pending deletion.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @param state the Protocol State object relevant to this operation
+	 */
+	private void handleStarted(Peer peer, ProtocolState state) {
+		
+		// Check that started Peer and current Peer are enhanced
+		if(state.getFields()[Peer.protocolVersionI].equals("1.0") || peer.getProtocolVersion().equals("1.0")) {
+	    	SystemManager.getInstance().logPrint("started Peer or current Peer is not enhanced, not running pending DELETEs", SystemManager.LogLevel.DEBUG);
+			return;
+		}
+		
+		int senderID = Integer.parseInt(state.getFields()[Peer.senderI]);
+		HashSet<String> filesToDelete = peer.getDatabase().getFilesToDelete().get(senderID);
+		
+		// Check if there are files pending deletion
+		if(filesToDelete == null) {
+	    	SystemManager.getInstance().logPrint("no pending DELETEs for Peer " + senderID, SystemManager.LogLevel.DEBUG);
+			return;
+		} else if(filesToDelete.size() == 0) {
+	    	SystemManager.getInstance().logPrint("no pending DELETEs for Peer " + senderID, SystemManager.LogLevel.DEBUG);
+			return;
+		}
+
+		// Run pending DELETE for each file the started Peer has yet to delete
+		for(String hash : filesToDelete) {
+			peer.getExecutor().submit(new DeleteProtocol(hash, senderID));
+		}
 	}
 }

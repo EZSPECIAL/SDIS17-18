@@ -8,7 +8,10 @@ public class DeleteProtocol implements Runnable {
 
 	private static final int maxAttempts = 3;
 	
+	private boolean pendingDelete = false;
 	private String filepath;
+	private String hash;
+	private int pendingPeerID;
 	private int attempts = 0;
 	
 	/**
@@ -18,6 +21,18 @@ public class DeleteProtocol implements Runnable {
 	 */
 	public DeleteProtocol(String filepath) {
 		this.filepath = filepath;
+	}
+	
+	/**
+	 * Runs a pending DELETE protocol procedure with specified pending Peer ID and hash.
+	 * 
+	 * @param hash textual representation of the hexadecimal values of a SHA256
+	 * @param pendingPeerID peer ID pending deletion of file
+	 */
+	public DeleteProtocol(String hash, int pendingPeerID) {
+		this.hash = hash;
+		this.pendingPeerID = pendingPeerID;
+		this.pendingDelete = true;
 	}
 	
 	@Override
@@ -91,17 +106,26 @@ public class DeleteProtocol implements Runnable {
 		SystemManager.getInstance().logPrint("started " + delMsg, SystemManager.LogLevel.NORMAL);
 		
 		// Initialise protocol state
-		String key = this.initializeProtocolInstance(peer);
+		String key;
+		if(this.pendingDelete) key = this.initializePendingDelete(peer);
+		else key = this.initializeProtocolInstance(peer);
+		
 		ProtocolState state = peer.getProtocols().get(key);
-		
-		// Create set of unique peers that have the file
 		HashSet<Integer> peersWithFile = new HashSet<Integer>();
-		ConcurrentHashMap<Long, ChunkInfo> chunks = peer.getDatabase().getChunks().get(state.getHashHex());
 		
-		if(chunks != null) {
-			for(Map.Entry<Long, ChunkInfo> chunk : chunks.entrySet()) {
-				peersWithFile.addAll(chunk.getValue().getPerceivedRepDeg().keySet());
+		// Create set of unique peers that have the file using database
+		if(!this.pendingDelete) {
+			
+			ConcurrentHashMap<Long, ChunkInfo> chunks = peer.getDatabase().getChunks().get(state.getHashHex());
+
+			if(chunks != null) {
+				for(Map.Entry<Long, ChunkInfo> chunk : chunks.entrySet()) {
+					peersWithFile.addAll(chunk.getValue().getPerceivedRepDeg().keySet());
+				}
 			}
+		// If pending delete use the pending Peer ID
+		} else {
+			peersWithFile.add(this.pendingPeerID);
 		}
 		
 		SystemManager.getInstance().logPrint("unique peers with file: " + peersWithFile.size(), SystemManager.LogLevel.VERBOSE);
@@ -111,11 +135,15 @@ public class DeleteProtocol implements Runnable {
 			
 			if(!this.deleteLoop(peer, state, peersWithFile)) {
 
-				SystemManager.getInstance().logPrint("not enough responses to DELETE, storing missing confirmation for later", SystemManager.LogLevel.NORMAL);
+				SystemManager.getInstance().logPrint("not all expected peers responsed to DELETE, storing missing confirmation for later", SystemManager.LogLevel.NORMAL);
 
 				// Add to database the Peers that haven't responded to this DELETE request
 				peersWithFile.removeAll(state.getRespondedID().get(0L));
 				peer.getDatabase().addToDelete(peersWithFile, state.getHashHex());
+			} else {
+				if(this.pendingDelete) {
+					peer.getDatabase().removeFromDelete(this.pendingPeerID, this.hash);
+				}
 			}
 		} else SystemManager.getInstance().logPrint("file does not seem to be backed up, cancelling deletion", SystemManager.LogLevel.NORMAL);
 		
@@ -175,6 +203,25 @@ public class DeleteProtocol implements Runnable {
 		state.initDeleteState(peer.getProtocolVersion(), filepath);
 		
 		String protocolKey = peer.getPeerID() + state.getHashHex() + state.getProtocolType().name();
+		peer.getProtocols().put(protocolKey, state);
+		
+		SystemManager.getInstance().logPrint("key inserted: " + protocolKey, SystemManager.LogLevel.VERBOSE);
+		return protocolKey;
+	}
+
+	/**
+	 * Initialises the ProtocolState object relevant to this pending delete procedure.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @return the key relevant to this protocol
+	 */
+	private String initializePendingDelete(Peer peer) throws NoSuchAlgorithmException, IOException {
+		
+		ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.DELETE, new ServiceMessage());
+		
+		state.initPendingDeleteState(peer.getProtocolVersion(), this.hash);
+		
+		String protocolKey = peer.getPeerID() + state.getHashHex() + state.getProtocolType().name() + this.pendingPeerID;
 		peer.getProtocols().put(protocolKey, state);
 		
 		SystemManager.getInstance().logPrint("key inserted: " + protocolKey, SystemManager.LogLevel.VERBOSE);

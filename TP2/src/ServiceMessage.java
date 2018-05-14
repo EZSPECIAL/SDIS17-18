@@ -21,6 +21,7 @@ public class ServiceMessage {
 	private static final int getchunkMinMsgLen = 5;
 	private static final int chunkMinMsgLen = 5;
 	private static final int removedMinMsgLen = 5;
+	private static final int startedMinMsgLen = 3;
 	
 	private static final int maxChunkNo = 1000000;
 	private static final int minRepDeg = 1;
@@ -37,7 +38,7 @@ public class ServiceMessage {
 	private static final int backRepDegI = 5;
 	
 	// Strict service message parsing flag
-	private static final boolean ignoreMinorErrors = true;
+	private static final boolean ignoreMinorErrors = false;
 	
 	// Message header termination indices
 	private int lineEndI = 0;
@@ -192,6 +193,21 @@ public class ServiceMessage {
 		
 		if(nRead <= 0) return header.getBytes();
 		else return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
+	}
+	
+	/**
+	 * Returns a service message with the following format: "STARTED &lt;Version&gt; &lt;SenderID&gt;".
+	 *  
+	 * @param peerID the numeric identifier of the sending Peer
+	 * @param protocolVersion the backup system version
+	 * @return
+	 */
+	public byte[] createStarted(int peerID, String protocolVersion) {
+		
+		String header = "STARTED " + protocolVersion + " " + peerID + headerTermination;
+		
+        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
+		return header.getBytes();
 	}
 	
 	/**
@@ -351,6 +367,13 @@ public class ServiceMessage {
 			if(!validateRemoved(fields)) return false;
 			return true;
 			
+		// Peer started message used for DELETE protocol enhancement
+		case "STARTED":
+			
+			if(!validateHeaderSize(fields.length, startedMinMsgLen, "STARTED")) return false;
+			if(!validateStarted(fields)) return false;
+			return true;
+			
 		// Unknown protocols
 		default:
 			SystemManager.getInstance().logPrint("unrecognized protocol, ignoring message...", SystemManager.LogLevel.DEBUG);
@@ -452,6 +475,19 @@ public class ServiceMessage {
 		
 		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI])
 				&& validateHash(fields[hashI]) && validateChunkNo(fields[backChunkNoI]);
+		
+		return validate;
+	}
+	
+	/**
+	 * Validates a STARTED message and returns whether it's valid.
+	 * 
+	 * @param fields the header fields
+	 * @return whether the STARTED message is valid
+	 */
+	private boolean validateStarted(String[] fields) {
+		
+		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI]);
 		
 		return validate;
 	}

@@ -136,6 +136,21 @@ public class ProtocolState {
 	}
 	
 	/**
+	 * Initialises the protocol state object for a pending DELETE procedure by setting the required fields.
+	 * 
+	 * @param protocolVersion the backup system version
+	 * @param hash textual representation of the hexadecimal values of a SHA256
+	 */
+	public void initPendingDeleteState(String protocolVersion, String hash) throws NoSuchAlgorithmException, IOException {
+		
+		this.protocolVersion = protocolVersion;
+		this.hashHex = hash;
+				
+		// Create hash set of deletion confirmations
+		this.respondedID.put(0L, new HashSet<Integer>());
+	}
+	
+	/**
 	 * Initialises the protocol state object for a delete response procedure by setting the required fields.
 	 * 
 	 * @param protocolVersion the backup system version

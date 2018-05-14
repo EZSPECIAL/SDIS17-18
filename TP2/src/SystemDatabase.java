@@ -216,6 +216,23 @@ public class SystemDatabase implements Serializable, Runnable {
 		    SystemManager.getInstance().logPrint("added hash " + hash + " as needing deletion for Peer " + key, SystemManager.LogLevel.DATABASE);
 		}
 	}
+
+	/**
+	 * Removes from the database the pending deletion identified by the given hash and Peer ID.
+	 * 
+	 * @param peer the peer that had a pending deletion
+	 * @param hash textual representation of the hexadecimal values of a SHA256
+	 */
+	public void removeFromDelete(int peer, String hash) {
+	
+		HashSet<String> fileHashes = this.filesToDelete.get(peer);
+		if(fileHashes == null) return;
+			
+		fileHashes.remove(hash);
+		this.filesToDelete.put(peer, fileHashes);
+		
+	    SystemManager.getInstance().logPrint("removed hash " + hash + " as needing deletion for Peer " + peer, SystemManager.LogLevel.DATABASE);
+	}
 	
 	/**
 	 * @return the hash map of hash maps containing info about chunks in the system
