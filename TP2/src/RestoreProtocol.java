@@ -18,7 +18,7 @@ public class RestoreProtocol implements Runnable {
 	private String filepath;
 	private String restoredFilepath;
 	private long receivedChunks = 0;
-	
+
 	/**
 	 * Runs a RESTORE protocol procedure with specified filepath.
 	 * 
@@ -112,6 +112,12 @@ public class RestoreProtocol implements Runnable {
 	private boolean getchunkLoop(Peer peer, ProtocolState state) throws IOException, InterruptedException {
 		
 		while(!state.isFinished()) {
+
+			// Run TCP server if enhanced Peer
+			if(!peer.getProtocolVersion().equals("1.0")) {
+				peer.getExecutor().submit(new RestoreServer(consecutiveMsgCount, peer.getPeerID()));
+				SystemManager.getInstance().logPrint("num threads: " + Thread.activeCount(), SystemManager.LogLevel.DEBUG); // TODO remove later
+			}
 			
 			int sent = 0;
 			while(sent < consecutiveMsgCount && !state.isFinished()) {
@@ -124,7 +130,7 @@ public class RestoreProtocol implements Runnable {
 				state.incrementCurrentChunkNo();
 				sent++;
 			}
-			
+
 			if(!checkReceivedChunks(state)) return false;
 			
 			// Write file as chunks arrive and reset hash map

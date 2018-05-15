@@ -2,6 +2,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class ServiceMessage {
 
@@ -22,6 +26,7 @@ public class ServiceMessage {
 	private static final int chunkMinMsgLen = 5;
 	private static final int removedMinMsgLen = 5;
 	private static final int startedMinMsgLen = 3;
+	private static final int enhancedGetchunkMinMsgLen = 6;
 	
 	private static final int maxChunkNo = 1000000;
 	private static final int minRepDeg = 1;
@@ -36,6 +41,9 @@ public class ServiceMessage {
 	// Backup header indices
 	private static final int backChunkNoI = 4;
 	private static final int backRepDegI = 5;
+	
+	// Enhanced RESTORE header indices
+	public static final int addressI = 5;
 	
 	// Strict service message parsing flag
 	private static final boolean ignoreMinorErrors = false;
@@ -122,11 +130,22 @@ public class ServiceMessage {
 	 * @param state the Protocol State object relevant to this operation
 	 * @return the binary data representing the message
 	 */
-	public byte[] createGetchunkMsg(int peerID, ProtocolState state) {
+	public byte[] createGetchunkMsg(int peerID, ProtocolState state) throws UnknownHostException {
+
+		String header;
+		// Create message according to protocol version
+		if(state.getProtocolVersion().equals("1.0")) {
+			header = "GETCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
+		// Append local address to new header line
+		} else {
+			
+			InetAddress addr = InetAddress.getLocalHost();
+			int port = (Peer.restoreBasePort + (peerID - 1) * 10) + 1; // TODO add based on running protocols, 10 limit
+			header = "GETCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + lineTermination;
+			header += addr.getHostAddress() + ":" + port + headerTermination;
+		}
 		
-		String header = "GETCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
-		
-        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
+        SystemManager.getInstance().logPrint("sending: " + header.trim().replaceAll(lineTermination, " / "), SystemManager.LogLevel.SERVICE_MSG);
         return header.getBytes();
 	}
 	
@@ -202,7 +221,7 @@ public class ServiceMessage {
 	 * @param protocolVersion the backup system version
 	 * @return
 	 */
-	public byte[] createStarted(int peerID, String protocolVersion) {
+	public byte[] createStartedMsg(int peerID, String protocolVersion) {
 		
 		String header = "STARTED " + protocolVersion + " " + peerID + headerTermination;
 		
@@ -289,20 +308,45 @@ public class ServiceMessage {
 		byte[] data = packet.getData();
 		String msg = new String(data);
 		
-		// Separate header into string
-		String header = msg.substring(0, this.lineEndI);
-		SystemManager.getInstance().logPrint("received: " + header, SystemManager.LogLevel.SERVICE_MSG);
+		String header = msg.substring(0, this.headerEndI);
+		SystemManager.getInstance().logPrint("received: " + header.replaceAll(lineTermination, " / "), SystemManager.LogLevel.SERVICE_MSG);
+		
+		// Separate first header line into string
+		String firstHeaderLine = msg.substring(0, this.lineEndI);
+		ArrayList<String> headerFields = new ArrayList<String>(Arrays.asList(firstHeaderLine.split("[ ]+")));
 
-		// Divide by fields and validate header
-		String[] headerFields = header.split("[ ]+");
-
-		if(headerFields.length < minimumMsgLen) {
-			SystemManager.getInstance().logPrint("invalid header, ignoring message...", SystemManager.LogLevel.DEBUG); 
-			return null;
+		// Parse second header line if current Peer is enhanced
+		if(this.lineEndI != this.headerEndI && !Peer.getInstance().getProtocolVersion().equals("1.0")) {
+			
+			String secondHeaderLine = msg.substring(this.lineEndI, this.headerEndI);
+			secondHeaderLine = secondHeaderLine.replaceAll(lineTermination, "");
+			ArrayList<String> additionalFields = new ArrayList<String>(Arrays.asList(secondHeaderLine.split("[ ]+")));
+			
+			// Merge additional fields
+			SystemManager.getInstance().logPrint("merging second header line", SystemManager.LogLevel.DEBUG);
+			headerFields.addAll(additionalFields);
+		}
+		
+		// Validate header
+		if(this.headerValidation(headerFields)) return headerFields.toArray(new String[0]);
+		else return null;
+	}
+	
+	/**
+	 *  Validates a service message size and header and returns whether it's valid.
+	 * 
+	 * @param fields the header fields
+	 * @return whether the header is valid
+	 */
+	private boolean headerValidation(ArrayList<String> fields) {
+		
+		if(fields.size() < minimumMsgLen) {
+			SystemManager.getInstance().logPrint("invalid header, ignoring message...", SystemManager.LogLevel.DEBUG);
+			return false;
 		}
 
-		if(!validateHeader(headerFields)) return null;
-		else return headerFields;
+		if(!validateHeader(fields.toArray(new String[0]))) return false;
+		else return true;
 	}
 	
 	/**
@@ -349,7 +393,9 @@ public class ServiceMessage {
 		// RESTORE protocol initiator message
 		case "GETCHUNK":
 			
-			if(!validateHeaderSize(fields.length, getchunkMinMsgLen, "GETCHUNK")) return false;
+			if(fields.length != enhancedGetchunkMinMsgLen) {
+				if(!validateHeaderSize(fields.length, getchunkMinMsgLen, "GETCHUNK")) return false;
+			}
 			if(!validateGetchunk(fields)) return false;
 			return true;
 		
@@ -447,6 +493,10 @@ public class ServiceMessage {
 		
 		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI])
 				&& validateHash(fields[hashI]) && validateChunkNo(fields[backChunkNoI]);
+
+		if(validate && (fields.length == enhancedGetchunkMinMsgLen)) {
+			return validateAddress(fields[addressI]);
+		}
 		
 		return validate;
 	}
@@ -615,6 +665,23 @@ public class ServiceMessage {
 		
 		if(value < minRepDeg || value > maxRepDeg) {
 			SystemManager.getInstance().logPrint("replication degree outside [1, 9] range, ignoring message...", SystemManager.LogLevel.DEBUG);
+			return false;
+		}
+		
+		return true;
+	}
+	
+	/**
+	 * Validates the address field and returns whether it's valid.
+	 * 
+	 * @param address the address and port of a server
+	 * @return whether the address field is valid
+	 */
+	private boolean validateAddress(String address) {
+
+		String[] split = address.split(":");
+		if(split.length != 2) {
+			SystemManager.getInstance().logPrint("address is not in \"IP:port\" format, ignoring message...", SystemManager.LogLevel.DEBUG);
 			return false;
 		}
 		

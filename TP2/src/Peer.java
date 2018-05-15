@@ -23,7 +23,8 @@ public class Peer implements RMITesting {
 	public static final int minResponseWaitMS = 0;
 	public static final int maxResponseWaitMS = 400;
 	public static final int consecutiveMsgWaitMS = 100;
-
+	public static final int restoreBasePort = 1026;
+	
 	public static final String storageFolderName = "Storage";
 	public static final String peerFolderPrefix = "Peer_";
 	public static final String restoredFolderName = "Restored";
@@ -38,6 +39,7 @@ public class Peer implements RMITesting {
 	public static final int hashI = 3;
 	public static final int chunkNoI = 4;
 	public static final int repDegI = 5;
+	public static final int addressI = 5;
 	
 	// Private constants
 	private static final int executorThreadsMax = 15;
@@ -130,7 +132,7 @@ public class Peer implements RMITesting {
 		
 		this.initRMI();
 		
-		byte[] msg = new ServiceMessage().createStarted(this.peerID, this.protocolVersion);
+		byte[] msg = new ServiceMessage().createStartedMsg(this.peerID, this.protocolVersion);
 		this.mcc.send(msg);
 	}
 	

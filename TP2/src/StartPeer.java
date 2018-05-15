@@ -72,7 +72,7 @@ public class StartPeer {
 			try {
 				logLevel = SystemManager.LogLevel.valueOf(args[logLevelI].toUpperCase());
 			} catch(IllegalArgumentException e) {
-				printErrExit("invalid logging level \"" + args[logLevelI].toUpperCase() + "\", must be one of [NONE, NORMAL, DEBUG, VERBOSE]!");
+				printErrExit("invalid logging level \"" + args[logLevelI].toUpperCase() + "\", must be one of [NONE, NORMAL, SERVICE_MSG, DEBUG, DATABASE, VERBOSE]!");
 			}
 			
 			SystemManager.LogMethod logMethod = null;

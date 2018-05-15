@@ -1,27 +1,9 @@
 
-    - RESTORE ENH (different version test / multiple peers same file)
-
----------------------
-ENHANCEMENTS
----------------------
-
-Restore (using TCP)
-
-    - ServerSocket - start TCP connection
-    - Socket - transfer data
-    - ServerSocket(int port)
-    - ServerSocket(int port, int backlog, InetAddress addr)
-    - Socket(InetAddress addr, int port)
-
-    - socket.accept() - wait for connection
-    - socket.close() / shutdownOutput()
-
-    - getInputStream() BufferedReader -> ReadLine()
-    - getOutputStream() PrintWriter -> println()
-    - ObjectInputStream() implements Serializable
-    - ObjectOutputStream() implements Serializable
-
-    - multiple clients
+    - RESTORE ENH close socket leak
+    - RESTORE EHN different version test
+    - RESTORE ENH multiple peers same file
+    - RESTORE ENH same peer multiple files
+    - ask: send CHUNK msg anyway?
 
 ---------------------
 SECURITY

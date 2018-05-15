@@ -1,6 +1,9 @@
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.net.InetAddress;
+import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TimeoutHandler implements Runnable {
@@ -259,10 +262,44 @@ public class TimeoutHandler implements Runnable {
 	    peer.getProtocols().remove(this.stopKey);
 	    SystemManager.getInstance().logPrint("key removed: " + this.stopKey, SystemManager.LogLevel.VERBOSE);
 	    
+	    // Run enhanced RESTORE response if current Peer and sending Peer are enhanced
+	    if(!state.getFields()[Peer.protocolVersionI].equals("1.0") && !peer.getProtocolVersion().equals("1.0")) {
+	    	SystemManager.getInstance().logPrint("initiating enhanced RESTORE response", SystemManager.LogLevel.DEBUG);
+	    	this.sendChunkTCP(peer, state);
+	    	return;
+	    }
+	    
 	    // Prepare the necessary fields for the response message and send it
 	    this.state.initRestoreResponseState(peer.getProtocolVersion(), state.getFields()[Peer.hashI], this.chunkPath, state.getFields()[Peer.chunkNoI]);
 	    byte[] msg = this.state.getParser().createChunkMsg(peer.getPeerID(), state);
 	    peer.getMdr().send(msg);
+	}
+	
+	// TODO doc
+	private void sendChunkTCP(Peer peer, ProtocolState state) throws IOException {
+	
+		// Prepare message to send through TCP socket
+	    this.state.initRestoreResponseState(peer.getProtocolVersion(), state.getFields()[Peer.hashI], this.chunkPath, state.getFields()[Peer.chunkNoI]);
+	    byte[] msg = this.state.getParser().createChunkMsg(peer.getPeerID(), state);
+	    
+	    // Get address and port sent by the requesting Peer
+	    String[] split = state.getFields()[Peer.addressI].split(":");
+	    InetAddress addr = InetAddress.getByName(split[0]);
+	    int port = Integer.parseInt(split[1]);
+	    
+	    SystemManager.getInstance().logPrint("address: " + addr + " port: " + port, SystemManager.LogLevel.VERBOSE);
+	    
+	    // Connect to server and port specified by GETCHUNK message
+	    Socket s = new Socket(addr, port);
+	    ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
+	    
+	    // Send the payload through TCP
+	    RestorePayload payload = new RestorePayload(msg);
+	    
+	    out.writeObject(payload);
+	    out.flush();
+	    out.close();
+	    s.close();
 	}
 	
 	/**
