@@ -157,7 +157,7 @@ public class ServiceMessage {
 	 * @return the binary data representing the message
 	 */
 	public byte[] createChunkMsg(int peerID, ProtocolState state) throws IOException {
-		
+				
 		// Get binary file data
 	    byte[] buf = new byte[dataSize];
 		int nRead = this.getData(state.getFilepath(), 0, buf);
@@ -171,6 +171,22 @@ public class ServiceMessage {
 		
 		if(nRead <= 0) return header.getBytes();
 		else return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
+	}
+
+	/**
+	 * Returns a service message with the following format: "CHUNK &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt; &lt;ChunkNo&gt;".
+	 * No chunk data is sent with this version of the CHUNK message.
+	 * 
+	 * @param peerID the numeric identifier of the sending Peer
+	 * @param state the Protocol State object relevant to this operation
+	 * @return the binary data representing the message
+	 */
+	public byte[] createEmptyChunkMsg(int peerID, ProtocolState state) {
+		
+		String header = "CHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
+		
+        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
+		return header.getBytes();
 	}
 	
 	/**

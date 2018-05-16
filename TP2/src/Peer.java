@@ -9,6 +9,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.NoSuchAlgorithmException;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -24,6 +25,7 @@ public class Peer implements RMITesting {
 	public static final int maxResponseWaitMS = 400;
 	public static final int consecutiveMsgWaitMS = 100;
 	public static final int restoreBasePort = 1026;
+	public static final int restoreCountLimit = 10;
 	
 	public static final String storageFolderName = "Storage";
 	public static final String peerFolderPrefix = "Peer_";
@@ -169,6 +171,38 @@ public class Peer implements RMITesting {
 	    if(!directory.exists()) {
 	        directory.mkdir();
 	    }
+	}
+
+	/**
+	 * Calculates the next available port for this Peer, each Peer can use a reserved range of ports
+	 * and calculates the next one by seeing how many RESTORE protocols are currently running.
+	 * 
+	 * @return the port to use, -1 if no available port
+	 */
+	public int findNextPortAllowed() {
+		
+		int restoreCount = this.countRestoreProtocols();
+		if(restoreCount >= Peer.restoreCountLimit) {
+			SystemManager.getInstance().logPrint("can't run more than " + Peer.restoreCountLimit + " restores at the same time on the same Peer, aborting...", SystemManager.LogLevel.NORMAL);
+			return -1;
+		}
+		
+		return (Peer.restoreBasePort + (this.peerID - 1) * 10) + restoreCount + 1;
+	}
+	
+	/**
+	 * Counts the currently running RESTORE protocols and returns it.
+	 * 
+	 * @return the number of currently running RESTORE protocols
+	 */
+	private int countRestoreProtocols() {
+		
+		int count = 0;
+		for(Map.Entry<String, ProtocolState> entry : this.protocols.entrySet()) {
+			if(entry.getKey().contains(ProtocolState.ProtocolType.RESTORE.name())) count++;
+		}
+		
+		return count;
 	}
 	
 	/**

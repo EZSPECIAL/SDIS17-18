@@ -1,6 +1,7 @@
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,6 +16,7 @@ public class RestoreProtocol implements Runnable {
 
 	private static final int consecutiveMsgCount = 5;
 	
+	private ServerSocket server;
 	private String filepath;
 	private String restoredFilepath;
 	private long receivedChunks = 0;
@@ -70,6 +72,12 @@ public class RestoreProtocol implements Runnable {
 				SystemManager.getInstance().logPrint("not enough chunk data received", SystemManager.LogLevel.DEBUG);
 				SystemManager.getInstance().logPrint("failed " + resMsg, SystemManager.LogLevel.NORMAL);
 			}
+			
+			// Close TCP server if enhanced Peer
+			if(!peer.getProtocolVersion().equals("1.0")) {
+				if(this.server != null) this.server.close();
+			}
+			
 		} catch(InterruptedException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception or thread interruption on restore protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
@@ -77,9 +85,34 @@ public class RestoreProtocol implements Runnable {
 			SystemManager.getInstance().logPrint("key removed: " + key, SystemManager.LogLevel.VERBOSE);
 			return;
 		}
-
+		
+		SystemManager.getInstance().logPrint("threads end: " + Thread.activeCount(), SystemManager.LogLevel.DEBUG); // TODO remove later
 		peer.getProtocols().remove(key);
 		SystemManager.getInstance().logPrint("key removed: " + key, SystemManager.LogLevel.VERBOSE);
+	}
+	
+	/**
+	 * Submits thread that runs the server for this enhanced RESTORE protocol.
+	 * 
+	 * @param peer the singleton Peer instance
+	 */
+	private void runRestoreServer(Peer peer) {
+		
+		SystemManager.getInstance().logPrint("threads start: " + Thread.activeCount(), SystemManager.LogLevel.DEBUG); // TODO remove later
+		
+		// Run server if it doesn't exist
+		if(this.server != null) return;
+		
+		try {
+
+			this.server = new ServerSocket((Peer.restoreBasePort + (peer.getPeerID() - 1) * 10) + 1); // TODO add to Peer as function
+		} catch (IOException e) {
+			SystemManager.getInstance().logPrint("I/O Exception creating server socket!", SystemManager.LogLevel.NORMAL);
+			e.printStackTrace();
+			return;
+		}
+		
+		peer.getExecutor().submit(new RestoreServer(this.server, consecutiveMsgCount));
 	}
 
 	/**
@@ -115,8 +148,7 @@ public class RestoreProtocol implements Runnable {
 
 			// Run TCP server if enhanced Peer
 			if(!peer.getProtocolVersion().equals("1.0")) {
-				peer.getExecutor().submit(new RestoreServer(consecutiveMsgCount, peer.getPeerID()));
-				SystemManager.getInstance().logPrint("num threads: " + Thread.activeCount(), SystemManager.LogLevel.DEBUG); // TODO remove later
+				this.runRestoreServer(peer);
 			}
 			
 			int sent = 0;

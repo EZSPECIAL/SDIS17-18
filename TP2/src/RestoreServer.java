@@ -6,35 +6,41 @@ import java.util.concurrent.Executors;
 
 public class RestoreServer implements Runnable {
 
-	private ServerSocket server;
-	private int maxConnections;
-	private ExecutorService executor;
+	private static final int threadMargin = 5;
 	
-	// TODO doc
-	public RestoreServer(int maxConnections, int peerID) {
-		
-		this.maxConnections = maxConnections;
-		this.executor = Executors.newFixedThreadPool(this.maxConnections);
-		
-		try {
-			this.server = new ServerSocket((Peer.restoreBasePort + (peerID - 1) * 10) + 1); // TODO add to Peer as function
-		} catch (IOException e) {
-			SystemManager.getInstance().logPrint("I/O Exception creating server socket!", SystemManager.LogLevel.NORMAL);
-			e.printStackTrace();
-		}
+	private ServerSocket server;
+	private ExecutorService executor;
+
+	/**
+	 * Handles server for receiving CHUNK messages from clients.
+	 * 
+	 * @param server the server socket
+	 * @param maxConnections max connections allowed for this server socket
+	 */
+	public RestoreServer(ServerSocket server, int maxConnections) {
+
+		this.executor = Executors.newFixedThreadPool(maxConnections + threadMargin);
+		this.server = server;
 	}
 
-	// TODO doc
-	private void waitForClient() throws IOException {
+	/**
+	 * Waits for a client connection and then spawns a worker thread
+	 * for handling the client message.
+	 */
+	private void waitForClient() {
 		
-		// TODO time out when all chunks received
-		// TODO add CHUNK message again
+		// Wait for client connections until parent thread closes socket
 		while(true) {
+
+			Socket s;
+			try {
+			s = server.accept();
+			} catch(IOException e) {
+				SystemManager.getInstance().logPrint("server closed", SystemManager.LogLevel.VERBOSE);
+				return;
+			}
 			
-			// Wait for client connection
-			Socket s = server.accept();
 			SystemManager.getInstance().logPrint("client connected", SystemManager.LogLevel.VERBOSE);
-			
 			this.executor.submit(new RestoreServerThread(s));
 		}
 	}
@@ -43,13 +49,7 @@ public class RestoreServer implements Runnable {
 	public void run() {
 		
 		Thread.currentThread().setName("TCP Server " + Thread.currentThread().getId());
-		
-		try {
-			this.waitForClient();
-		} catch (IOException e) {
-			SystemManager.getInstance().logPrint("I/O Exception listening on server socket!", SystemManager.LogLevel.NORMAL);
-			e.printStackTrace();
-			return;
-		}
+		this.waitForClient();
+		this.executor.shutdown();
 	}
 }

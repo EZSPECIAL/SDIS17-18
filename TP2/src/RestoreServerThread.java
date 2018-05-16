@@ -16,8 +16,11 @@ public class RestoreServerThread implements Runnable {
 		this.client = client;
 	}
 
-	// TODO doc
-	private void waitForData() throws IOException, ClassNotFoundException {
+	/**
+	 * Receives a CHUNK message through TCP and passes it along to
+	 * the matching RESTORE protocol.
+	 */
+	private void receiveAndProcessChunk() throws IOException, ClassNotFoundException {
 
 		ObjectInputStream input = new ObjectInputStream(client.getInputStream());
 
@@ -61,7 +64,7 @@ public class RestoreServerThread implements Runnable {
 		Thread.currentThread().setName("TCP Thread " + Thread.currentThread().getId());
 		
 		try {
-			this.waitForData();
+			this.receiveAndProcessChunk();
 		} catch (IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception receiving from client!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();

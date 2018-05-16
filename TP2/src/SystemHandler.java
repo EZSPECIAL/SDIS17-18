@@ -287,6 +287,12 @@ public class SystemHandler implements Runnable {
 	    	chunkState.setChunkMsgAlreadySent(true);
 	    } else SystemManager.getInstance().logPrint("received CHUNK but no CHUNK_STOP protocol matched, key: " + chunkKey, SystemManager.LogLevel.VERBOSE);
 	    
+	    // Abort storing chunk data if both sending and current Peer are enhanced
+	    if(!state.getFields()[Peer.protocolVersionI].equals("1.0") && !peer.getProtocolVersion().equals("1.0")) {
+	    	SystemManager.getInstance().logPrint("not storing CHUNK because enhanced RESTORE", SystemManager.LogLevel.DEBUG);
+	    	return;
+	    }
+	    
 		// Check if this RESTORE protocol exists
 		String protocolKey = peer.getPeerID() + state.getFields()[Peer.hashI] + ProtocolState.ProtocolType.RESTORE.name();
 		ProtocolState currState = peer.getProtocols().get(protocolKey);

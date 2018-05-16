@@ -262,20 +262,32 @@ public class TimeoutHandler implements Runnable {
 	    peer.getProtocols().remove(this.stopKey);
 	    SystemManager.getInstance().logPrint("key removed: " + this.stopKey, SystemManager.LogLevel.VERBOSE);
 	    
-	    // Run enhanced RESTORE response if current Peer and sending Peer are enhanced
-	    if(!state.getFields()[Peer.protocolVersionI].equals("1.0") && !peer.getProtocolVersion().equals("1.0")) {
-	    	SystemManager.getInstance().logPrint("initiating enhanced RESTORE response", SystemManager.LogLevel.DEBUG);
-	    	this.sendChunkTCP(peer, state);
-	    	return;
-	    }
-	    
 	    // Prepare the necessary fields for the response message and send it
 	    this.state.initRestoreResponseState(peer.getProtocolVersion(), state.getFields()[Peer.hashI], this.chunkPath, state.getFields()[Peer.chunkNoI]);
-	    byte[] msg = this.state.getParser().createChunkMsg(peer.getPeerID(), state);
-	    peer.getMdr().send(msg);
+
+	    // Run enhanced RESTORE response if current Peer and sending Peer are enhanced
+	    if(!state.getFields()[Peer.protocolVersionI].equals("1.0") && !peer.getProtocolVersion().equals("1.0")) {
+	    	
+		    byte[] msg = this.state.getParser().createEmptyChunkMsg(peer.getPeerID(), state);
+		    peer.getMdr().send(msg);
+	    	
+	    	SystemManager.getInstance().logPrint("initiating enhanced RESTORE response", SystemManager.LogLevel.DEBUG);
+	    	this.sendChunkTCP(peer, state);
+	    // Else run regular RESTORE
+	    } else {
+	    	
+		    byte[] msg = this.state.getParser().createChunkMsg(peer.getPeerID(), state);
+		    peer.getMdr().send(msg);
+	    }
 	}
 	
-	// TODO doc
+	/**
+	 * Sends CHUNK message through TCP by connecting to the server specified by the
+	 * GETCHUNK message received.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @param state the Protocol State object relevant to this operation
+	 */
 	private void sendChunkTCP(Peer peer, ProtocolState state) throws IOException {
 	
 		// Prepare message to send through TCP socket

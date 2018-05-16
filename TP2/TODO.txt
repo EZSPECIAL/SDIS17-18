@@ -1,9 +1,8 @@
 
-    - RESTORE ENH close socket leak
-    - RESTORE EHN different version test
-    - RESTORE ENH multiple peers same file
+    - RESTORE ENH find port
+    - RESTORE ENH different version test
     - RESTORE ENH same peer multiple files
-    - ask: send CHUNK msg anyway?
+    - DELETE ENH version mismatch
 
 ---------------------
 SECURITY
@@ -30,7 +29,6 @@ EXTRAS
 ---------------------
 
     - synchronize databases across Peers
-    - file hash, add initial bytes
     - every protocol playing nice with each other (prevent same peer same protocol same file)
-    - DELETE ENH version mismatch
     - DELETE ENH delete -> backup -> old delete deletes new backup if same file
+    - RESTORE ENH multiple peers same file
