@@ -32,3 +32,5 @@ EXTRAS
     - every protocol playing nice with each other (prevent same peer same protocol same file)
     - DELETE ENH delete -> backup -> old delete deletes new backup if same file
     - RESTORE ENH multiple peers same file
+    - DELETE lease?
+    - DB backup between peers (fileid?)
