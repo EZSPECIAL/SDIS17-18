@@ -52,6 +52,7 @@ public class Peer implements RMITesting {
 	private int peerID;
 	private String accessPoint;
 	private long maxDiskSpace = 5000;
+	private KeystoreManager ksManager;
 	
 	// Sockets for multicast channels
 	private ServiceChannel mcc;
@@ -95,6 +96,10 @@ public class Peer implements RMITesting {
 		this.protocolVersion = protocolVersion;
 		this.peerID = peerID;
 		this.accessPoint = accessPoint;
+		
+		// TODO keystore
+		this.ksManager = new KeystoreManager();
+		ksManager.accessKeystore();
 		
 		// Load database
 		SystemDatabase db = SystemDatabase.loadDatabase("../" + Peer.databaseFolderName + "/" + Peer.databasePrefix + this.peerID);
