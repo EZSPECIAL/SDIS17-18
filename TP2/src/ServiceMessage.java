@@ -132,21 +132,28 @@ public class ServiceMessage {
 	 */
 	public byte[] createGetchunkMsg(int peerID, ProtocolState state) throws UnknownHostException {
 
-		String header;
-		// Create message according to protocol version
-		if(state.getProtocolVersion().equals("1.0")) {
-			header = "GETCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
-		// Append local address to new header line
-		} else {
-			
-			InetAddress addr = InetAddress.getLocalHost();
-			int port = (Peer.restoreBasePort + (peerID - 1) * 10) + 1; // TODO add based on running protocols, 10 limit
-			header = "GETCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + lineTermination;
-			header += addr.getHostAddress() + ":" + port + headerTermination;
-		}
-		
-        SystemManager.getInstance().logPrint("sending: " + header.trim().replaceAll(lineTermination, " / "), SystemManager.LogLevel.SERVICE_MSG);
+		String header = "GETCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
+        
+		SystemManager.getInstance().logPrint("sending: " + header.trim().replaceAll(lineTermination, " / "), SystemManager.LogLevel.SERVICE_MSG);
         return header.getBytes();
+	}
+	
+	/**
+	 * Returns a service message with the following format: "GETCHUNK &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt; &lt;ChunkNo&gt; &lt;CRLF&gt; &lt;ip:port&gt;".
+	 * 
+	 * @param peerID the numeric identifier of the sending Peer
+	 * @param state the Protocol State object relevant to this operation
+	 * @param port enhanced restore server port
+	 * @return the binary data representing the message
+	 */
+	public byte[] createEnhGetchunkMsg(int peerID, ProtocolState state, int port) throws UnknownHostException {
+
+		InetAddress addr = InetAddress.getLocalHost();
+		String header = "GETCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + lineTermination;
+		header += addr.getHostAddress() + ":" + port + headerTermination;
+
+		SystemManager.getInstance().logPrint("sending: " + header.trim().replaceAll(lineTermination, " / "), SystemManager.LogLevel.SERVICE_MSG);
+		return header.getBytes();
 	}
 	
 	/**

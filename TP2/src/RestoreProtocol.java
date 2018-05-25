@@ -17,6 +17,7 @@ public class RestoreProtocol implements Runnable {
 	private static final int consecutiveMsgCount = 5;
 	
 	private ServerSocket server;
+	private int serverPort;
 	private String filepath;
 	private String restoredFilepath;
 	private long receivedChunks = 0;
@@ -85,8 +86,7 @@ public class RestoreProtocol implements Runnable {
 			SystemManager.getInstance().logPrint("key removed: " + key, SystemManager.LogLevel.VERBOSE);
 			return;
 		}
-		
-		SystemManager.getInstance().logPrint("threads end: " + Thread.activeCount(), SystemManager.LogLevel.DEBUG); // TODO remove later
+
 		peer.getProtocols().remove(key);
 		SystemManager.getInstance().logPrint("key removed: " + key, SystemManager.LogLevel.VERBOSE);
 	}
@@ -98,14 +98,13 @@ public class RestoreProtocol implements Runnable {
 	 */
 	private void runRestoreServer(Peer peer) {
 		
-		SystemManager.getInstance().logPrint("threads start: " + Thread.activeCount(), SystemManager.LogLevel.DEBUG); // TODO remove later
-		
 		// Run server if it doesn't exist
 		if(this.server != null) return;
 		
 		try {
 
-			this.server = new ServerSocket((Peer.restoreBasePort + (peer.getPeerID() - 1) * 10) + 1); // TODO add to Peer as function
+			this.serverPort = Peer.getInstance().findNextPortAllowed();
+			this.server = new ServerSocket(this.serverPort);
 		} catch (IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception creating server socket!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
@@ -154,8 +153,13 @@ public class RestoreProtocol implements Runnable {
 			int sent = 0;
 			while(sent < consecutiveMsgCount && !state.isFinished()) {
 			
-				// Create and send the GETCHUNK message for the current chunk
-				byte[] msg = state.getParser().createGetchunkMsg(peer.getPeerID(), state);
+				// Create and send the GETCHUNK message for the current chunk, according to protocol version
+				byte[] msg;
+				if(peer.getProtocolVersion().equals("1.0")) {
+					msg = state.getParser().createGetchunkMsg(peer.getPeerID(), state);
+				} else {
+					msg = state.getParser().createEnhGetchunkMsg(peer.getPeerID(), state, this.serverPort);
+				}
 				peer.getMcc().send(msg);
 
 				Thread.sleep(Peer.consecutiveMsgWaitMS);

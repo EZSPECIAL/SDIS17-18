@@ -187,6 +187,7 @@ public class Peer implements RMITesting {
 			return -1;
 		}
 		
+		SystemManager.getInstance().logPrint("Found " + restoreCount + " restores running", SystemManager.LogLevel.VERBOSE);
 		return (Peer.restoreBasePort + (this.peerID - 1) * 10) + restoreCount + 1;
 	}
 	

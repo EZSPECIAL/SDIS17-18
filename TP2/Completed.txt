@@ -16,6 +16,11 @@ CHANGELOG
         - when a Peer starts it sends a STARTED message which triggers any pending deletions
     - Fixed bug with BACKUP ENH, now sends STORED message even if it perceives that the replication degree has been met
     - TestApp STATE now prints which Peer IDs the Peer perceives to own the chunk
+    - RESTORE ENH
+        - file restoring now uses TCP
+        - initiator sends chunk request with the server ip:port
+        - peers who own the chunk connect to the server and send the chunk
+        - reserves 10 ports for each Peer so 10 restores can be run at the same time
 
 ---------------------
 RUNNING
