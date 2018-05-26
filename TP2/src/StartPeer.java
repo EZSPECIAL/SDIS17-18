@@ -1,5 +1,9 @@
 import java.io.IOException;
 import java.net.*;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableEntryException;
+import java.security.cert.CertificateException;
 
 public class StartPeer {
 
@@ -10,8 +14,9 @@ public class StartPeer {
 	private static final int mccI = 3;
 	private static final int mdbI = 4;
 	private static final int mdrI = 5;
-	private static final int logLevelI = 6;
-	private static final int logMethodI = 7;
+	private static final int passI = 6;
+	private static final int logLevelI = 7;
+	private static final int logMethodI = 8;
 	
 	/**
 	 * Starts a Peer for a distributed backup system with the specified arguments. Peer is started by
@@ -24,14 +29,32 @@ public class StartPeer {
 	 * @param args 4.  multicast control channel IP:port
 	 * @param args 5.  multicast data backup IP:port
 	 * @param args 6.  multicast data recovery IP:port
-	 * @param args 7.  logging level
-	 * @param args 8.  logging method
+	 * @param args 7.  keystore password
+	 * @param args 8.  logging level
+	 * @param args 9.  logging method
 	 */
 	public static void main(String[] args) {
+		
 		try {
 			parseArguments(args);
-		} catch (ClassNotFoundException | IOException e) {
+		} catch(ClassNotFoundException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception initializing Peer!", SystemManager.LogLevel.NORMAL);
+			e.printStackTrace();
+			return;
+		} catch(NoSuchAlgorithmException e) {
+			SystemManager.getInstance().logPrint("Requested crypto algorithm that isnt' available!", SystemManager.LogLevel.NORMAL);
+			e.printStackTrace();
+			return;
+		} catch(CertificateException e) {
+			SystemManager.getInstance().logPrint("Certificate exception!", SystemManager.LogLevel.NORMAL);
+			e.printStackTrace();
+			return;
+		} catch(KeyStoreException e) {
+			SystemManager.getInstance().logPrint("Keystore exception!", SystemManager.LogLevel.NORMAL);
+			e.printStackTrace();
+			return;
+		} catch(UnrecoverableEntryException e) {
+			SystemManager.getInstance().logPrint("Could not access secret key!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
 			return;
 		}
@@ -42,9 +65,9 @@ public class StartPeer {
 	 * 
 	 * @param args command line arguments received
 	 */
-	private static void parseArguments(String[] args) throws ClassNotFoundException, IOException {
+	private static void parseArguments(String[] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException, CertificateException, KeyStoreException, UnrecoverableEntryException {
 		
-		if(args.length != 6 && args.length != 8) cmdErr("wrong number of arguments!");
+		if(args.length != 7 && args.length != 9) cmdErr("wrong number of arguments!");
 		
 		// Parse protocol version
 		if(!args[versionI].equals("1.0") && !args[versionI].equals("1.1")) printErrExit("protocol version must be 1.0 or 1.1!");
@@ -66,7 +89,7 @@ public class StartPeer {
 		if(mccPort == mdbPort || mccPort == mdrPort || mdbPort == mdrPort) printErrExit("multicast channel ports must be different!");
 		
 		// Parse optional parameters for logging options
-		if(args.length == 8) {
+		if(args.length == 9) {
 			
 			SystemManager.LogLevel logLevel = null;
 			try {
@@ -86,7 +109,7 @@ public class StartPeer {
 		}
 		
 		SystemManager.getInstance().setPeerID(peerID);
-		Peer.getInstance().initPeer(args[versionI], peerID, args[accessPointI], mccAddr, mccPort, mdbAddr, mdbPort, mdrAddr, mdrPort);
+		Peer.getInstance().initPeer(args[versionI], peerID, args[accessPointI], mccAddr, mccPort, mdbAddr, mdbPort, mdrAddr, mdrPort, args[passI]);
 	}
 	
 	/**

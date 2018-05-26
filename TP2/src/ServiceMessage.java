@@ -12,7 +12,9 @@ public class ServiceMessage {
 	// Header/body constants
 	private static final String lineTermination = "\r\n";
 	private static final String headerTermination = "\r\n\r\n";
+	private static final String macSeparator = "\r\n\r\n\r\n";
 	private static final int headerTerminationSize = 4;
+	private static final int macSeparatorSize = 6;
 	private static final int dataSize = 64000;
 	private static final int expectedVersionLen = 3;
 	private static final int expectedHashLen = 64;
@@ -51,6 +53,7 @@ public class ServiceMessage {
 	// Message header termination indices
 	private int lineEndI = 0;
 	private int headerEndI = 0;
+	private int macEndI = 0;
 
 	/**
 	 * Returns a service message with the following format: "PUTCHUNK &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt; &lt;ChunkNo&gt; &lt;ReplicationDegree&gt;".
@@ -71,11 +74,16 @@ public class ServiceMessage {
 	    
 	    // Merge header and body to single byte[]
         String header = "PUTCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + chunkNo + " " + state.getDesiredRepDeg() + headerTermination;
-	    		
+	    
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
 		
-		if(nRead <= 0) return header.getBytes();
-		else return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
+        byte[] msg;
+		if(nRead <= 0) msg = header.getBytes();
+		else msg = this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
+		
+		// Append MAC to message
+		String mac = macSeparator + SecurityHandler.computeMAC(msg);
+		return this.mergeByte(msg, msg.length, mac.getBytes(), mac.getBytes().length);
 	}
 
 	/**
@@ -176,8 +184,13 @@ public class ServiceMessage {
 		
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
 		
-		if(nRead <= 0) return header.getBytes();
-		else return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
+        byte[] msg;
+		if(nRead <= 0) msg = header.getBytes();
+		else msg = this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
+		
+		// Append MAC to message
+		String mac = macSeparator + SecurityHandler.computeMAC(msg);
+		return this.mergeByte(msg, msg.length, mac.getBytes(), mac.getBytes().length);
 	}
 
 	/**
@@ -303,10 +316,11 @@ public class ServiceMessage {
 		String msg = new String(data);
 		
 		// Find first header line termination and overall header terminator
-		this.lineEndI = msg.indexOf("\r\n");
-		this.headerEndI = msg.indexOf("\r\n\r\n");
+		this.lineEndI = msg.indexOf(lineTermination);
+		this.headerEndI = msg.indexOf(headerTermination);
+		this.macEndI = msg.indexOf(macSeparator);
 		
-        String headerPos = "found line end at " + this.lineEndI + " and header end at " + this.headerEndI;
+        String headerPos = "line end at " + this.lineEndI + " header end at " + this.headerEndI + " mac end at " + this.macEndI;
         SystemManager.getInstance().logPrint(headerPos, SystemManager.LogLevel.VERBOSE);
 		
 		if(this.lineEndI < 0 || this.headerEndI < 0) {
@@ -314,6 +328,8 @@ public class ServiceMessage {
 	        SystemManager.getInstance().logPrint(headerErr, SystemManager.LogLevel.DEBUG);
 	        return false;
 		}
+		
+		// TODO add no MAC message
 		
 		return true;
 	}
@@ -330,6 +346,12 @@ public class ServiceMessage {
 		
 		byte[] data = packet.getData();
 		String msg = new String(data);
+		
+		// TODO remove
+		if(this.macEndI != -1) {
+			String mac = msg.substring(this.macEndI + macSeparatorSize).trim();
+			SystemManager.getInstance().logPrint("header MAC: " + mac, SystemManager.LogLevel.SERVICE_MSG);
+		}
 		
 		String header = msg.substring(0, this.headerEndI);
 		SystemManager.getInstance().logPrint("received: " + header.replaceAll(lineTermination, " / "), SystemManager.LogLevel.SERVICE_MSG);
@@ -720,7 +742,7 @@ public class ServiceMessage {
 	public byte[] stripBody(DatagramPacket packet) throws IOException {
 
 		// Calculate body size and offset
-		int bodySize = packet.getLength() - this.headerEndI - headerTerminationSize;
+		int bodySize = packet.getLength() - this.headerEndI - headerTerminationSize - macSeparatorSize - SecurityHandler.macSizeByte * 2;
 		int bodyOffset = this.headerEndI + headerTerminationSize;
 		byte[] data = packet.getData();
 		
@@ -731,10 +753,7 @@ public class ServiceMessage {
 		ByteArrayOutputStream output = new ByteArrayOutputStream();
 		output.write(data, bodyOffset, bodySize);
 		byte[] bodyData = output.toByteArray();
-
-		output.close();
 		
 		return bodyData;
 	}
-	
 }

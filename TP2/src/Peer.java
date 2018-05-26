@@ -8,7 +8,10 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableEntryException;
+import java.security.cert.CertificateException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -33,6 +36,9 @@ public class Peer implements RMITesting {
 	public static final String restoredSuffix = "_restoredBy";
 	public static final String databaseFolderName = "Database";
 	public static final String databasePrefix = "Peer_";
+	public static final String keystoreName = "keystore";
+	public static final String encryptAlias = "RDAaHH75UZH9Mgv5jzYCG3jvAL9XQPvm";
+	public static final String macAlias = "SNWB3EG6sECey2hkRGEtNNejBaHHkQvW";
 	
 	// Public header indices
 	public static final int protocolI = 0;
@@ -91,15 +97,15 @@ public class Peer implements RMITesting {
 	 * @param mdrAddr address of the multicast data restore channel
 	 * @param mdrPort port for the multicast data restore channel
 	 */
-	public void initPeer(String protocolVersion, int peerID, String accessPoint, InetAddress mccAddr, int mccPort, InetAddress mdbAddr, int mdbPort, InetAddress mdrAddr, int mdrPort) throws ClassNotFoundException, IOException {
+	public void initPeer(String protocolVersion, int peerID, String accessPoint, InetAddress mccAddr, int mccPort, InetAddress mdbAddr, int mdbPort, InetAddress mdrAddr, int mdrPort, String pw) throws ClassNotFoundException, IOException, NoSuchAlgorithmException, CertificateException, KeyStoreException, UnrecoverableEntryException {
 		
 		this.protocolVersion = protocolVersion;
 		this.peerID = peerID;
 		this.accessPoint = accessPoint;
 		
-		// TODO keystore
-		this.ksManager = new KeystoreManager();
-		ksManager.accessKeystore();
+		// Creates keystore if it doesn't exist
+		this.ksManager = new KeystoreManager(pw);
+		ksManager.verifyKeystore();
 		
 		// Load database
 		SystemDatabase db = SystemDatabase.loadDatabase("../" + Peer.databaseFolderName + "/" + Peer.databasePrefix + this.peerID);
@@ -340,5 +346,11 @@ public class Peer implements RMITesting {
 	public ScheduledExecutorService getExecutor() {
 		return executor;
 	}
-
+	
+	/**
+	 * @return the keystore manager of the Peer
+	 */
+	public KeystoreManager getKsManager() {
+		return this.ksManager;
+	}
 }
