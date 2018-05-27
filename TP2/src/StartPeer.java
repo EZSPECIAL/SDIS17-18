@@ -197,11 +197,11 @@ public class StartPeer {
 		System.out.println("StartPeer: " + message);
 		
 		System.out.println("Regular usage:");
-		System.out.println("\t java StartPeer 1.0 1 Peer1 224.0.0.1:1500 224.0.0.2:1600 224.0.0.3:1700");
-		System.out.println("\t java StartPeer 1.1 1 Peer1 224.0.0.1:1500 224.0.0.2:1600 224.0.0.3:1700");
+		System.out.println("\t java StartPeer 1.0 1 Peer1 224.0.0.1:1500 224.0.0.2:1600 224.0.0.3:1700 ks_password");
+		System.out.println("\t java StartPeer 1.1 1 Peer1 224.0.0.1:1500 224.0.0.2:1600 224.0.0.3:1700 ks_password");
 		System.out.println("Logging options:");
-		System.out.println("\t java StartPeer 1.0 1 Peer1 224.0.0.1:1500 224.0.0.2:1600 224.0.0.3:1700 <logLevel> <logMethod>");
-		System.out.println("\t <logLevel> - NONE, NORMAL, DEBUG, VERBOSE");
+		System.out.println("\t java StartPeer 1.0 1 Peer1 224.0.0.1:1500 224.0.0.2:1600 224.0.0.3:1700 ks_password <logLevel> <logMethod>");
+		System.out.println("\t <logLevel> - NONE, NORMAL, SERVICE_MSG, DEBUG, DATABASE, VERBOSE");
 		System.out.println("\t <logMethod> - CONSOLE, FILE, BOTH");
 		
 		System.exit(-1);

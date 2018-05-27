@@ -21,6 +21,8 @@ CHANGELOG
         - initiator sends chunk request with the server ip:port
         - peers who own the chunk connect to the server and send the chunk
         - reserves 10 ports for each Peer so 10 restores can be run at the same time
+    - SECURITY
+        - HMAC SHA256 to authenticate message and prevent tampering
 
 ---------------------
 RUNNING

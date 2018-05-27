@@ -43,7 +43,13 @@ public class DeleteProtocol implements Runnable {
 		
 		// Run protocol according to version
 		if(peer.getProtocolVersion().equals("1.0")) {
-			this.normalDelete(peer);
+			try {
+				this.normalDelete(peer);
+			} catch(IOException e) {
+				SystemManager.getInstance().logPrint("I/O Exception or thread interruption on delete protocol!", SystemManager.LogLevel.NORMAL);
+				e.printStackTrace();
+				return;
+			}
 		} else {
 			try {
 				this.enhancedDelete(peer);
@@ -59,9 +65,9 @@ public class DeleteProtocol implements Runnable {
 	 * Runs a delete protocol which attempts to delete a file from the backup service.
 	 * Does not confirm deletion.
 	 * 
-	 * @param peer the singleton Peer instance
+	 * @param peer the singleton Peer instance 
 	 */
-	public void normalDelete(Peer peer) {
+	public void normalDelete(Peer peer) throws IOException {
 		
 		String delMsg = "delete: " + filepath;
 		SystemManager.getInstance().logPrint("started " + delMsg, SystemManager.LogLevel.NORMAL);

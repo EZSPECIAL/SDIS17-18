@@ -41,6 +41,9 @@ public class RestoreServerThread implements Runnable {
 		// Message was not recognised, ignore
 		if(state.getFields() == null) return;
 		
+		// Validate MAC
+		if(!state.getParser().validateMAC(state.getPacket())) return;
+		
 		// Check if this RESTORE protocol exists
 		String protocolKey = peer.getPeerID() + state.getFields()[Peer.hashI] + ProtocolState.ProtocolType.RESTORE.name();
 		ProtocolState currState = peer.getProtocols().get(protocolKey);

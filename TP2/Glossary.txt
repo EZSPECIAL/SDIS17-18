@@ -19,3 +19,5 @@ packet                  the packet that originated the header fields
 hash                    textual representation of the hexadecimal values of a SHA256
 peer                    the singleton Peer instance
 size                    the size of the chunk in KB
+
+ks                      the keystore to use

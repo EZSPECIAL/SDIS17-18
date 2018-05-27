@@ -46,6 +46,9 @@ public class SystemHandler implements Runnable {
 		// Message was not recognised, ignore
 		if(state.getFields() == null) return;
 		
+		// Validate MAC
+		if(!state.getParser().validateMAC(state.getPacket())) return;
+		
 		// Run handler for each known protocol type
 		switch(state.getFields()[Peer.protocolI].toUpperCase()) {
 		

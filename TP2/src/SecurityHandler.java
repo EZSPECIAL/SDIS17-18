@@ -16,7 +16,12 @@ public class SecurityHandler {
 	public static final int encryptSizeBit = 256;
 	public static final int encryptSizeByte = 32;
 	
-	// TODO doc
+	/**
+	 * Computes a MAC using SHA256 and returns it in textual hex representation.
+	 * 
+	 * @param data the binary data to use for MAC computation
+	 * @return the computed MAC
+	 */
 	public static String computeMAC(byte[] data) throws IOException {
 		
 		Mac sha256_HMAC = null;

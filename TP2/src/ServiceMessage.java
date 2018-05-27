@@ -3,7 +3,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -81,9 +80,7 @@ public class ServiceMessage {
 		if(nRead <= 0) msg = header.getBytes();
 		else msg = this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
 		
-		// Append MAC to message
-		String mac = macSeparator + SecurityHandler.computeMAC(msg);
-		return this.mergeByte(msg, msg.length, mac.getBytes(), mac.getBytes().length);
+		return this.appendMAC(msg);
 	}
 
 	/**
@@ -93,12 +90,12 @@ public class ServiceMessage {
 	 * @param state the Protocol State object relevant to this operation
 	 * @return the binary data representing the message
 	 */
-	public byte[] createStoredMsg(int peerID, ProtocolState state) {
+	public byte[] createStoredMsg(int peerID, ProtocolState state) throws IOException {
 		
 		String header = "STORED " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
 		
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
-        return header.getBytes();
+        return this.appendMAC(header.getBytes());
 	}
 	
 	/**
@@ -108,12 +105,12 @@ public class ServiceMessage {
 	 * @param state the Protocol State object relevant to this operation
 	 * @return the binary data representing the message
 	 */
-	public byte[] createDeleteMsg(int peerID, ProtocolState state) {
+	public byte[] createDeleteMsg(int peerID, ProtocolState state) throws IOException {
 		
 		String header = "DELETE " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + headerTermination;
 		
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
-		return header.getBytes();
+        return this.appendMAC(header.getBytes());
 	}
 	
 	/**
@@ -123,12 +120,12 @@ public class ServiceMessage {
 	 * @param state the Protocol State object relevant to this operation
 	 * @return the binary data representing the message
 	 */
-	public byte[] createDeletedMsg(int peerID, ProtocolState state) {
+	public byte[] createDeletedMsg(int peerID, ProtocolState state) throws IOException {
 		
 		String header = "DELETED " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + headerTermination;
 		
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
-		return header.getBytes();
+        return this.appendMAC(header.getBytes());
 	}
 	
 	/**
@@ -138,12 +135,12 @@ public class ServiceMessage {
 	 * @param state the Protocol State object relevant to this operation
 	 * @return the binary data representing the message
 	 */
-	public byte[] createGetchunkMsg(int peerID, ProtocolState state) throws UnknownHostException {
+	public byte[] createGetchunkMsg(int peerID, ProtocolState state) throws IOException {
 
 		String header = "GETCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
         
 		SystemManager.getInstance().logPrint("sending: " + header.trim().replaceAll(lineTermination, " / "), SystemManager.LogLevel.SERVICE_MSG);
-        return header.getBytes();
+        return this.appendMAC(header.getBytes());
 	}
 	
 	/**
@@ -154,14 +151,14 @@ public class ServiceMessage {
 	 * @param port enhanced restore server port
 	 * @return the binary data representing the message
 	 */
-	public byte[] createEnhGetchunkMsg(int peerID, ProtocolState state, int port) throws UnknownHostException {
+	public byte[] createEnhGetchunkMsg(int peerID, ProtocolState state, int port) throws IOException {
 
 		InetAddress addr = InetAddress.getLocalHost();
 		String header = "GETCHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + lineTermination;
 		header += addr.getHostAddress() + ":" + port + headerTermination;
 
 		SystemManager.getInstance().logPrint("sending: " + header.trim().replaceAll(lineTermination, " / "), SystemManager.LogLevel.SERVICE_MSG);
-		return header.getBytes();
+        return this.appendMAC(header.getBytes());
 	}
 	
 	/**
@@ -188,9 +185,7 @@ public class ServiceMessage {
 		if(nRead <= 0) msg = header.getBytes();
 		else msg = this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
 		
-		// Append MAC to message
-		String mac = macSeparator + SecurityHandler.computeMAC(msg);
-		return this.mergeByte(msg, msg.length, mac.getBytes(), mac.getBytes().length);
+		return this.appendMAC(msg);
 	}
 
 	/**
@@ -201,12 +196,12 @@ public class ServiceMessage {
 	 * @param state the Protocol State object relevant to this operation
 	 * @return the binary data representing the message
 	 */
-	public byte[] createEmptyChunkMsg(int peerID, ProtocolState state) {
+	public byte[] createEmptyChunkMsg(int peerID, ProtocolState state) throws IOException {
 		
 		String header = "CHUNK " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
 		
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
-		return header.getBytes();
+        return this.appendMAC(header.getBytes());
 	}
 	
 	/**
@@ -221,7 +216,7 @@ public class ServiceMessage {
 		String header = "REMOVED " + state.getProtocolVersion() + " " + peerID + " " + state.getHashHex() + " " + state.getCurrentChunkNo() + headerTermination;
 		
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
-		return header.getBytes();
+        return this.appendMAC(header.getBytes());
 	}
 	
 	/**
@@ -246,8 +241,11 @@ public class ServiceMessage {
 	    		
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
 		
-		if(nRead <= 0) return header.getBytes();
-		else return this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
+        byte[] msg;
+		if(nRead <= 0) msg = header.getBytes();
+		else msg = this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
+		
+		return this.appendMAC(msg);
 	}
 	
 	/**
@@ -255,14 +253,14 @@ public class ServiceMessage {
 	 *  
 	 * @param peerID the numeric identifier of the sending Peer
 	 * @param protocolVersion the backup system version
-	 * @return
+	 * @return the binary data representing the message
 	 */
-	public byte[] createStartedMsg(int peerID, String protocolVersion) {
+	public byte[] createStartedMsg(int peerID, String protocolVersion) throws IOException {
 		
 		String header = "STARTED " + protocolVersion + " " + peerID + headerTermination;
 		
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
-		return header.getBytes();
+        return this.appendMAC(header.getBytes());
 	}
 	
 	/**
@@ -284,6 +282,18 @@ public class ServiceMessage {
 	    output.close();
 	    
 	    return merged;
+	}
+
+	/**
+	 * Appends a MAC to a service message.
+	 * 
+	 * @param msg the service message to append the MAC to
+	 * @return the service message with MAC appended
+	 */
+	private byte[] appendMAC(byte[] msg) throws IOException {
+		
+		String mac = macSeparator + SecurityHandler.computeMAC(msg);
+		return this.mergeByte(msg, msg.length, mac.getBytes(), mac.getBytes().length);
 	}
 	
 	/**
@@ -323,15 +333,51 @@ public class ServiceMessage {
         String headerPos = "line end at " + this.lineEndI + " header end at " + this.headerEndI + " mac end at " + this.macEndI;
         SystemManager.getInstance().logPrint(headerPos, SystemManager.LogLevel.VERBOSE);
 		
+        // Non terminated message
 		if(this.lineEndI < 0 || this.headerEndI < 0) {
-	        String headerErr = "non-terminated message received!";
-	        SystemManager.getInstance().logPrint(headerErr, SystemManager.LogLevel.DEBUG);
+	        SystemManager.getInstance().logPrint("non-terminated message received!", SystemManager.LogLevel.DEBUG);
+	        return false;
+		}
+
+		// No MAC found
+		if(this.macEndI < 0) {
+	        SystemManager.getInstance().logPrint("message with no MAC found, ignoring...", SystemManager.LogLevel.DEBUG);
 	        return false;
 		}
 		
-		// TODO add no MAC message
-		
 		return true;
+	}
+
+	/**
+	 * Verifies that the MAC appended to the service message
+	 * coincides with the newly computed MAC.
+	 * 
+	 * @param packet the packet to extract the MAC from
+	 * @return whether the computed MAC and received MAC matched
+	 */
+	public boolean validateMAC(DatagramPacket packet) throws IOException {
+		
+		// Get header MAC
+		String msg = new String(packet.getData());
+		String headerMAC = msg.substring(this.macEndI + macSeparatorSize).trim();
+		
+		// Compute new MAC
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		output.write(packet.getData(), 0, packet.getLength() - SecurityHandler.macSizeByte * 2 - macSeparatorSize);
+		byte[] noMAC = output.toByteArray();
+
+		String computedMAC = SecurityHandler.computeMAC(noMAC);
+		
+		SystemManager.getInstance().logPrint("computed MAC: " + computedMAC, SystemManager.LogLevel.VERBOSE);
+		SystemManager.getInstance().logPrint("header MAC: " + headerMAC, SystemManager.LogLevel.VERBOSE);
+		
+		// Verify MACs
+		if(computedMAC.equals(headerMAC)) {
+			return true;
+		} else {
+			SystemManager.getInstance().logPrint("MAC doesn't coincide, not a valid system message, ignoring...", SystemManager.LogLevel.NORMAL);
+			return false;
+		}
 	}
 	
 	/**
@@ -346,12 +392,6 @@ public class ServiceMessage {
 		
 		byte[] data = packet.getData();
 		String msg = new String(data);
-		
-		// TODO remove
-		if(this.macEndI != -1) {
-			String mac = msg.substring(this.macEndI + macSeparatorSize).trim();
-			SystemManager.getInstance().logPrint("header MAC: " + mac, SystemManager.LogLevel.SERVICE_MSG);
-		}
 		
 		String header = msg.substring(0, this.headerEndI);
 		SystemManager.getInstance().logPrint("received: " + header.replaceAll(lineTermination, " / "), SystemManager.LogLevel.SERVICE_MSG);
