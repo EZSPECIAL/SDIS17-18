@@ -23,6 +23,7 @@ CHANGELOG
         - reserves 10 ports for each Peer so 10 restores can be run at the same time
     - SECURITY
         - HMAC SHA256 to authenticate message and prevent tampering
+        - AES-128 encrypt/decrypt of chunk data
 
 ---------------------
 RUNNING

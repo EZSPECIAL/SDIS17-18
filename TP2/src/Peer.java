@@ -79,7 +79,7 @@ public class Peer implements RMITesting {
 	/**
 	 * @return the singleton instance of the class
 	 */
-	public static Peer getInstance( ) {
+	public static Peer getInstance() {
 		return singleton;
 	}
 	

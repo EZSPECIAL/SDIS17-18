@@ -15,6 +15,7 @@ public class ServiceMessage {
 	private static final int headerTerminationSize = 4;
 	private static final int macSeparatorSize = 6;
 	private static final int dataSize = 64000;
+	private static final int aesPadding = 16;
 	private static final int expectedVersionLen = 3;
 	private static final int expectedHashLen = 64;
 	
@@ -66,7 +67,17 @@ public class ServiceMessage {
 
 		// Get binary file data
 	    byte[] buf = new byte[dataSize];
-		int nRead = this.getData(state.getFilepath(), chunkNo, buf);
+		int nRead = this.getData(state.getFilepath(), chunkNo, buf, false);
+		
+		byte[] data = null;
+		if(nRead > 0) {
+			
+			ByteArrayOutputStream output = new ByteArrayOutputStream();
+			output.write(buf, 0, nRead);
+			byte[] bodyData = output.toByteArray();
+			
+			data = SecurityHandler.encryptAES128(bodyData);
+		}
 		
         String readMsg = "putchunk nRead: " + nRead;
         SystemManager.getInstance().logPrint(readMsg, SystemManager.LogLevel.VERBOSE);
@@ -78,7 +89,7 @@ public class ServiceMessage {
 		
         byte[] msg;
 		if(nRead <= 0) msg = header.getBytes();
-		else msg = this.mergeByte(header.getBytes(), header.getBytes().length, buf, nRead);
+		else msg = this.mergeByte(header.getBytes(), header.getBytes().length, data, data.length);
 		
 		return this.appendMAC(msg);
 	}
@@ -171,8 +182,8 @@ public class ServiceMessage {
 	public byte[] createChunkMsg(int peerID, ProtocolState state) throws IOException {
 				
 		// Get binary file data
-	    byte[] buf = new byte[dataSize];
-		int nRead = this.getData(state.getFilepath(), 0, buf);
+	    byte[] buf = new byte[dataSize + aesPadding];
+		int nRead = this.getData(state.getFilepath(), 0, buf, true);
 		
         SystemManager.getInstance().logPrint("chunk nRead: " + nRead, SystemManager.LogLevel.VERBOSE);
 	    
@@ -230,8 +241,8 @@ public class ServiceMessage {
 	public byte[] createReclaimMsg(int peerID, ProtocolState state) throws IOException {
 		
 		// Get binary file data
-	    byte[] buf = new byte[dataSize];
-		int nRead = this.getData(state.getFilepath(), 0, buf);
+	    byte[] buf = new byte[dataSize + aesPadding];
+		int nRead = this.getData(state.getFilepath(), 0, buf, true);
 		
         String readMsg = "putchunk nRead: " + nRead;
         SystemManager.getInstance().logPrint(readMsg, SystemManager.LogLevel.VERBOSE);
@@ -302,13 +313,17 @@ public class ServiceMessage {
 	 * @param filepath the file path of the file to read a chunk from
 	 * @param chunkNo the current chunk number
 	 * @param data the array to fill
+	 * @param encrypted whether the data is encrypted
 	 * @return the actual number of bytes read
 	 */
-	private int getData(String filepath, long chunkNo, byte[] data) throws IOException {
+	private int getData(String filepath, long chunkNo, byte[] data, boolean encrypted) throws IOException {
 
 		FileInputStream input = new FileInputStream(filepath);
 		input.skip(chunkNo * dataSize);
-		int nRead = input.read(data, 0, dataSize);
+		int nRead = 0;
+		if(encrypted) {
+			nRead = input.read(data, 0, dataSize + aesPadding);
+		} else nRead = input.read(data, 0, dataSize);
 		input.close();
 		
 		return nRead;

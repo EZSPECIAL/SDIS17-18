@@ -27,7 +27,7 @@ public class KeystoreManager {
 
 	/**
 	 * Verifies if keystore exists, if not creates one with a
-	 * secret key for AES-256 and another for HMAC SHA256.
+	 * secret key for AES-128 and another for HMAC SHA256.
 	 */
 	public void verifyKeystore() throws IOException, NoSuchAlgorithmException, CertificateException, KeyStoreException, UnrecoverableEntryException {
 		
@@ -68,7 +68,7 @@ public class KeystoreManager {
 	}
 
 	/**
-	 * Creates a keystore with a AES-256 secret key and a
+	 * Creates a keystore with a AES-128 secret key and a
 	 * HMAC SHA256 secret key.
 	 * 
 	 * @param ks the keystore to use
@@ -77,7 +77,7 @@ public class KeystoreManager {
 		
 	    ks.load(null, this.pw);
 
-	    // Insert AES-256 and HMAC SHA256 secret keys into KeyStore
+	    // Insert AES-128 and HMAC SHA256 secret keys into KeyStore
 	    KeyGenerator encryptKey = KeyGenerator.getInstance("AES");
 	    KeyGenerator macKey = KeyGenerator.getInstance("HmacSHA256");
 	    encryptKey.init(SecurityHandler.encryptSizeBit);

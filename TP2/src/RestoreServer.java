@@ -6,7 +6,7 @@ import java.util.concurrent.Executors;
 
 public class RestoreServer implements Runnable {
 
-	private static final int threadMargin = 5;
+	private static final int threadMargin = 10;
 	
 	private ServerSocket server;
 	private ExecutorService executor;

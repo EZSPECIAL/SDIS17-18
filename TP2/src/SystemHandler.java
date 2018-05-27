@@ -307,7 +307,7 @@ public class SystemHandler implements Runnable {
 
 		// Store chunk number and chunk data received
 		Long chunkNo = Long.parseLong(state.getFields()[Peer.chunkNoI]);
-		byte[] data = state.getParser().stripBody(state.getPacket());
+		byte[] data = SecurityHandler.decryptAES128(state.getParser().stripBody(state.getPacket()));
 		
 		SystemManager.getInstance().logPrint("restored chunk \"" + state.getFields()[Peer.hashI] + "." + chunkNo + "\"", SystemManager.LogLevel.DEBUG);
 		currState.getRestoredChunks().put(chunkNo, data);

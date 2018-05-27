@@ -6,7 +6,7 @@ import java.util.concurrent.Future;
 
 public class ServiceChannelHandler implements Runnable {
 
-	private static final int executorThreadsMax = 15;
+	private static final int executorThreadsMax = 20;
 
 	private ExecutorService executor = Executors.newFixedThreadPool(executorThreadsMax);
 	private HashSet<Future<?>> tasks = new HashSet<Future<?>>();

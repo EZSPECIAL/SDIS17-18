@@ -21,6 +21,7 @@ public class RestoreProtocol implements Runnable {
 	private String filepath;
 	private String restoredFilepath;
 	private long receivedChunks = 0;
+	private long currentStartChunkNo = 0;
 
 	/**
 	 * Runs a RESTORE protocol procedure with specified filepath.
@@ -150,6 +151,9 @@ public class RestoreProtocol implements Runnable {
 				this.runRestoreServer(peer);
 			}
 			
+			// Starting point for the next batch
+			this.currentStartChunkNo = state.getCurrentChunkNo();
+			
 			int sent = 0;
 			while(sent < consecutiveMsgCount && !state.isFinished()) {
 			
@@ -192,10 +196,20 @@ public class RestoreProtocol implements Runnable {
 		long diff = state.getChunkTotal() - this.receivedChunks;
 		long limit = (diff > RestoreProtocol.consecutiveMsgCount) ? RestoreProtocol.consecutiveMsgCount : diff;
 		
+		boolean valid = true;
 		do {
+			
 			if(Thread.interrupted()) return false;
+			
+			valid = true;
 			chunks = state.getRestoredChunks();
-		} while(chunks.size() < limit);
+			
+			// Check that every expected chunk arrived
+			for(long i = this.currentStartChunkNo; i < this.currentStartChunkNo + limit; i++) {
+				
+				if(!chunks.containsKey(i)) valid = false;
+			}
+		} while(!valid);
 		
 		this.receivedChunks += limit;
 		return true;
@@ -215,6 +229,7 @@ public class RestoreProtocol implements Runnable {
 		File chunk = new File(this.restoredFilepath);
 		FileOutputStream output = new FileOutputStream(chunk, true);
 		for(Map.Entry<Long, byte[]> entry : chunks.entrySet()) {
+			SystemManager.getInstance().logPrint("restored chunk no: " + entry.getKey(), SystemManager.LogLevel.VERBOSE);
 			output.write(entry.getValue());
 		}
 		output.close();
