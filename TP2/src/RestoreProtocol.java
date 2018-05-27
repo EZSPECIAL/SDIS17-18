@@ -2,13 +2,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.attribute.FileTime;
 import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,28 +16,69 @@ public class RestoreProtocol implements Runnable {
 	private ServerSocket server;
 	private int serverPort;
 	private String filepath;
+	private FileInfo fileInfo;
+	private boolean found;
 	private String restoredFilepath;
 	private long receivedChunks = 0;
 	private long currentStartChunkNo = 0;
+	private long timeElapsed = 0;
+	private long timeoutMS = 0;
 
 	/**
 	 * Runs a RESTORE protocol procedure with specified filepath.
 	 * 
 	 * @param filepath the file path to restore
+	 * @param fileInfo the object containing info about the file
+	 * @param found whether the file was initiated on this Peer
 	 */
-	public RestoreProtocol(String filepath) {
+	public RestoreProtocol(String filepath, FileInfo fileInfo, boolean found) {
 		this.filepath = filepath;
+		this.fileInfo = fileInfo;
+		this.found = found;
 	}
 	
 	@Override
 	public void run() {
 		
 		Thread.currentThread().setName("Restore " + Thread.currentThread().getId());
-
-		String resMsg = "restore: " + filepath;
-		SystemManager.getInstance().logPrint("started " + resMsg, SystemManager.LogLevel.NORMAL);
 		
 		Peer peer = Peer.getInstance();
+		
+		// Peer is not the initiator, try to retrieve file info from other Peers
+		if(!found) {
+			
+			String retrieveKey = this.initializeRetrieveProtocol(peer);
+			ProtocolState retrieveState = peer.getProtocols().get(retrieveKey);
+			
+			// Send request for file info
+			try {
+				byte[] msg = retrieveState.getParser().createRetrieveMsg(peer.getPeerID(), peer.getProtocolVersion(), this.filepath);
+				peer.getMcc().send(msg);
+			} catch(IOException e) {
+				SystemManager.getInstance().logPrint("I/O Exception retrieving info!", SystemManager.LogLevel.NORMAL);
+				e.printStackTrace();
+				return;
+			}
+			
+			// Wait for response
+			do {
+				if(Thread.interrupted()) {
+					SystemManager.getInstance().logPrint("could not retrieve file info, might not exist in the system", SystemManager.LogLevel.NORMAL);
+					return;
+				}
+
+			} while(!retrieveState.isRetrieveMsgResponded());
+			
+			this.fileInfo = retrieveState.getFileInfo();
+			
+			peer.getProtocols().remove(retrieveKey);
+			SystemManager.getInstance().logPrint("key removed: " + retrieveKey, SystemManager.LogLevel.VERBOSE);
+			
+			this.timeoutMS = fileInfo.getTotalChunks() * Peer.baseRestoreTimeoutMS;
+		}
+		
+		String resMsg = "restore: " + filepath;
+		SystemManager.getInstance().logPrint("started " + resMsg, SystemManager.LogLevel.NORMAL);
 
 		// Initialise protocol state
 		String key = null;
@@ -80,7 +118,7 @@ public class RestoreProtocol implements Runnable {
 				if(this.server != null) this.server.close();
 			}
 			
-		} catch(InterruptedException | IOException e) {
+		} catch(IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception or thread interruption on restore protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
 			peer.getProtocols().remove(key);
@@ -119,15 +157,32 @@ public class RestoreProtocol implements Runnable {
 	 * Initialises the ProtocolState object relevant to this restore procedure.
 	 * 
 	 * @param peer the singleton Peer instance
-	 * @return whether initialisation was successful
+	 * @return the protocol key, null if unsuccessful
 	 */
 	private String initializeProtocolInstance(Peer peer) throws NoSuchAlgorithmException, IOException {
 		
 		ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.RESTORE, new ServiceMessage());
 		
-		if(!state.initRestoreState(peer.getProtocolVersion(), this.filepath)) return null;
+		if(!state.initRestoreState(peer.getProtocolVersion(), this.fileInfo)) return null;
 		
 		String protocolKey = peer.getPeerID() + state.getHashHex() + state.getProtocolType().name();
+		peer.getProtocols().put(protocolKey, state);
+		
+		SystemManager.getInstance().logPrint("key inserted: " + protocolKey, SystemManager.LogLevel.VERBOSE);
+		return protocolKey;
+	}
+	
+	/**
+	 * Initialises the ProtocolState object relevant to this retrieve procedure.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @return the protocol key, null if unsuccessful
+	 */
+	private String initializeRetrieveProtocol(Peer peer) {
+		
+		ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.RETRIEVE, new ServiceMessage());
+		
+		String protocolKey = peer.getPeerID() + this.filepath + state.getProtocolType().name();
 		peer.getProtocols().put(protocolKey, state);
 		
 		SystemManager.getInstance().logPrint("key inserted: " + protocolKey, SystemManager.LogLevel.VERBOSE);
@@ -142,7 +197,7 @@ public class RestoreProtocol implements Runnable {
 	 * @param state the Protocol State object relevant to this operation
 	 * @return whether the restore was successful
 	 */
-	private boolean getchunkLoop(Peer peer, ProtocolState state) throws IOException, InterruptedException {
+	private boolean getchunkLoop(Peer peer, ProtocolState state) throws IOException {
 		
 		while(!state.isFinished()) {
 
@@ -166,7 +221,12 @@ public class RestoreProtocol implements Runnable {
 				}
 				peer.getMcc().send(msg);
 
-				Thread.sleep(Peer.consecutiveMsgWaitMS);
+				try {
+					Thread.sleep(Peer.consecutiveMsgWaitMS);
+				} catch(InterruptedException e) {
+					// ignore
+				}
+				
 				state.incrementCurrentChunkNo();
 				sent++;
 			}
@@ -199,7 +259,11 @@ public class RestoreProtocol implements Runnable {
 		boolean valid = true;
 		do {
 			
-			if(Thread.interrupted()) return false;
+            long timeBefore = System.currentTimeMillis();
+			
+			if(Thread.interrupted()) {
+				if(this.timeoutMS != 0 && this.timeElapsed >= this.timeoutMS) return false;
+			}
 			
 			valid = true;
 			chunks = state.getRestoredChunks();
@@ -209,6 +273,8 @@ public class RestoreProtocol implements Runnable {
 				
 				if(!chunks.containsKey(i)) valid = false;
 			}
+			
+            timeElapsed = (System.currentTimeMillis() - timeBefore);
 		} while(!valid);
 		
 		this.receivedChunks += limit;
@@ -247,17 +313,16 @@ public class RestoreProtocol implements Runnable {
 		
 		// Create filepaths for restored file
 		String folderPath = "../" + Peer.restoredFolderName;
-		String[] split = state.getFilename().split("[.]");
+		String[] split = this.fileInfo.getFilename().split("[.]");
 		
-		// Get file's access time to build the restored filename
-		Path attrRead = Paths.get(this.filepath);
-	    FileTime access = (FileTime) Files.getAttribute(attrRead, "lastAccessTime");
-		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
-		String dateString = String.format(dateFormat.format(access.toMillis()));
+		// Get current date/time
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss"); 
+	    Date date = new Date();  
+	    String dateString = dateFormat.format(date);
 		
 		String restoredFilepath;
 		if(split.length <= 1) {
-			restoredFilepath = folderPath + "/" + dateString + " - " + state.getFilename() + Peer.restoredSuffix + "_" + peer.getPeerID();
+			restoredFilepath = folderPath + "/" + dateString + " - " + this.fileInfo.getFilename() + Peer.restoredSuffix + "_" + peer.getPeerID();
 		} else {
 			split[split.length - 2] = split[split.length - 2] + Peer.restoredSuffix + "_" + peer.getPeerID();
 			restoredFilepath = folderPath + "/" + dateString + " - " + String.join(".", split);

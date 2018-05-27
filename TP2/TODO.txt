@@ -1,6 +1,5 @@
 
-    - restore even without original file (add file metadata to DB / RETRIEVE message)
-    - DB backup between peers (filename as fileID)
+    - delete even without original file
     - report
     - javadoc
     - delivery
@@ -15,3 +14,4 @@ Problems
     - RESTORE ENH multiple peers same file won't work, needs destination Peer on message
     - Could backup keystore between Peers
     - Same peer/protocol/file isn't prevented
+    - Database isn't backed up and fault tolerant

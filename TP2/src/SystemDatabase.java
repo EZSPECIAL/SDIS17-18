@@ -6,6 +6,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -141,11 +142,13 @@ public class SystemDatabase implements Serializable, Runnable {
 		// Update database with file info
 		String hash = state.getHashHex();
 		String filepath = state.getFilepath();
+		long chunkTotal = state.getChunkTotal();
 		int repDeg = state.getDesiredRepDeg();
 		String fileKey = hash;
 		
-		if(this.initiatedFiles.putIfAbsent(fileKey, new FileInfo(filepath, hash, repDeg)) != null) {
+		if(this.initiatedFiles.putIfAbsent(fileKey, new FileInfo(filepath, hash, chunkTotal, repDeg)) != null) {
 			this.initiatedFiles.get(fileKey).setFilepath(filepath);
+			this.initiatedFiles.get(fileKey).setTotalChunks(chunkTotal);
 			this.initiatedFiles.get(fileKey).setDesiredRepDeg(repDeg);
 			SystemManager.getInstance().logPrint("updated file \"" + fileKey + "\" with path " + filepath + " and desired repDeg " + repDeg, SystemManager.LogLevel.DATABASE);
 		} else SystemManager.getInstance().logPrint("new file \"" + fileKey + "\" with path " + filepath + " and desired repDeg " + repDeg, SystemManager.LogLevel.DATABASE);
@@ -235,6 +238,32 @@ public class SystemDatabase implements Serializable, Runnable {
 		else this.filesToDelete.put(peer, fileHashes);
 		
 	    SystemManager.getInstance().logPrint("removed hash " + hash + " as needing deletion for Peer " + peer, SystemManager.LogLevel.DATABASE);
+	}
+
+	/**
+	 * Uses the specified string to find a file info in the database.
+	 * 
+	 * @param name the filename / filepath of the file info to retrieve
+	 * @return the file info found, null if not found
+	 */
+	public FileInfo retrieveFileInfo(String name) {
+		
+		boolean isPath = (name.indexOf("/") != -1) ? true : false;
+
+		for(Map.Entry<String, FileInfo> entry : this.initiatedFiles.entrySet()) {
+
+			if(isPath) {
+				if(entry.getValue().getFilepath().equals(name)) {
+					return entry.getValue();
+				}
+			} else {
+				if(entry.getValue().getFilename().equals(name)) {
+					return entry.getValue();
+				}
+			}
+		}
+
+		return null;
 	}
 	
 	/**

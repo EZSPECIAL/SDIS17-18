@@ -49,9 +49,17 @@ public class Peer implements RMITesting {
 	public static final int repDegI = 5;
 	public static final int addressI = 5;
 	
+	// Retrieve header indices
+	public static final int fileI = 3;
+	
+	// Info header indices
+	public static final int pathI = 4;
+	public static final int nameI = 5;
+	public static final int chunkTotalI = 6;
+	
 	// Private constants
 	private static final int executorThreadsMax = 15;
-	private static final int baseRestoreTimeoutMS = 800;
+	public static final int baseRestoreTimeoutMS = 800;
 	
 	// Peer info
 	private String protocolVersion;
@@ -253,12 +261,18 @@ public class Peer implements RMITesting {
 		
 		Thread.currentThread().setName("Restore " + Thread.currentThread().getId());
 		
-		ProtocolState state = new ProtocolState(new ServiceMessage());
-		Long timeoutMS = state.getTotalChunks(filepath) * baseRestoreTimeoutMS;
+		// Search database for filepath/filename
+		FileInfo fileInfo = this.database.retrieveFileInfo(filepath);
+		boolean found = (fileInfo != null) ? true : false;
 
+		long timeoutMS = baseTimeoutMS;
+		if(found) {
+			timeoutMS = fileInfo.getTotalChunks() * baseRestoreTimeoutMS;
+		}
+		
 		SystemManager.getInstance().logPrint("restore timeout: " + timeoutMS + "ms", SystemManager.LogLevel.VERBOSE);
 		
-		Future<?> handler = executor.submit(new RestoreProtocol(filepath));
+		Future<?> handler = executor.submit(new RestoreProtocol(filepath, fileInfo, found));
 
 		executor.schedule(() -> {
 			handler.cancel(true);

@@ -60,7 +60,6 @@ public class TestApp {
 		case "restore":
 			
 			if(args.length != 3) cmdErr("wrong argument number for RESTORE protocol!", "restore");
-			if(!checkFilepath(args[opnd1I])) printErrExit("path specified does not exist or is a directory!");
 
 			runRestore(args[opnd1I]);
 			break;
@@ -69,7 +68,6 @@ public class TestApp {
 		case "delete":
 			
 			if(args.length != 3) cmdErr("wrong argument number for DELETE protocol!", "delete");
-			if(!checkFilepath(args[opnd1I])) printErrExit("path specified does not exist or is a directory!");
 
 			runDelete(args[opnd1I]);
 			break;

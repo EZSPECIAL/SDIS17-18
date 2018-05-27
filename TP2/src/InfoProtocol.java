@@ -33,6 +33,8 @@ public class InfoProtocol implements Runnable {
 			FileInfo fileInfo = fileEntry.getValue();
 			SystemManager.getInstance().simpleLog("INITIATED FILE", SystemManager.LogLevel.NORMAL);
 			SystemManager.getInstance().simpleLog("\tpath: " + fileInfo.getFilepath(), SystemManager.LogLevel.NORMAL);
+			SystemManager.getInstance().simpleLog("\tfilename: " + fileInfo.getFilename(), SystemManager.LogLevel.NORMAL);
+			SystemManager.getInstance().simpleLog("\tchunks: " + fileInfo.getTotalChunks(), SystemManager.LogLevel.NORMAL);
 			SystemManager.getInstance().simpleLog("\tSHA256: " + fileInfo.getFileID(), SystemManager.LogLevel.NORMAL);
 			SystemManager.getInstance().simpleLog("\tdesired repDeg: " + fileInfo.getDesiredRepDeg(), SystemManager.LogLevel.NORMAL);
 		}

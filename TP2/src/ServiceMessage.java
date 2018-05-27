@@ -29,6 +29,8 @@ public class ServiceMessage {
 	private static final int removedMinMsgLen = 5;
 	private static final int startedMinMsgLen = 3;
 	private static final int enhancedGetchunkMinMsgLen = 6;
+	private static final int retrieveMinMsgLen = 4;
+	private static final int infoMinMsgLen = 7;
 	
 	private static final int maxChunkNo = 1000000;
 	private static final int minRepDeg = 1;
@@ -269,6 +271,38 @@ public class ServiceMessage {
 	public byte[] createStartedMsg(int peerID, String protocolVersion) throws IOException {
 		
 		String header = "STARTED " + protocolVersion + " " + peerID + headerTermination;
+		
+        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
+        return this.appendMAC(header.getBytes());
+	}
+	
+	/**
+	 * Returns a service message with the following format: "RETRIEVE &lt;Version&gt; &lt;SenderID&gt; &lt;FileRequest&gt;".
+	 *  
+	 * @param peerID the numeric identifier of the sending Peer
+	 * @param protocolVersion the backup system version
+	 * @param file the filepath / filename to lookup
+	 * @return the binary data representing the message
+	 */
+	public byte[] createRetrieveMsg(int peerID, String protocolVersion, String file) throws IOException {
+		
+		String header = "RETRIEVE " + protocolVersion + " " + peerID + " " + file + headerTermination;
+		
+        SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
+        return this.appendMAC(header.getBytes());
+	}
+	
+	/**
+	 * Returns a service message with the following format: "INFO &lt;Version&gt; &lt;SenderID&gt; &lt;FileID&gt; &lt;FilePath&gt; &lt;FileName&gt; &lt;ChunkTotal&gt;".
+	 *  
+	 * @param peerID the numeric identifier of the sending Peer
+	 * @param protocolVersion the backup system version
+	 * @param info the file info to use for creating the message
+	 * @return the binary data representing the message
+	 */
+	public byte[] createInfoMsg(int peerID, String protocolVersion, FileInfo info) throws IOException {
+		
+		String header = "INFO " + protocolVersion + " " + peerID + " " + info.getFileID() + " " + info.getFilepath() + " " + info.getFilename() + " " + info.getTotalChunks() + headerTermination;
 		
         SystemManager.getInstance().logPrint("sending: " + header.trim(), SystemManager.LogLevel.SERVICE_MSG);
         return this.appendMAC(header.getBytes());
@@ -520,6 +554,20 @@ public class ServiceMessage {
 			if(!validateStarted(fields)) return false;
 			return true;
 			
+		// Peer looking for fileID of given filepath/filename
+		case "RETRIEVE":
+			
+			if(!validateHeaderSize(fields.length, retrieveMinMsgLen, "RETRIEVE")) return false;
+			if(!validateRetrieve(fields)) return false;
+			return true;
+			
+		// Peer response to RETRIEVE request
+		case "INFO":
+			
+			if(!validateHeaderSize(fields.length, infoMinMsgLen, "INFO")) return false;
+			if(!validateInfo(fields)) return false;
+			return true;
+			
 		// Unknown protocols
 		default:
 			SystemManager.getInstance().logPrint("unrecognized protocol, ignoring message...", SystemManager.LogLevel.DEBUG);
@@ -638,6 +686,33 @@ public class ServiceMessage {
 	private boolean validateStarted(String[] fields) {
 		
 		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI]);
+		
+		return validate;
+	}
+	
+	/**
+	 * Validates a RETRIEVE message and returns whether it's valid.
+	 * 
+	 * @param fields the header fields
+	 * @return whether the RETRIEVE message is valid
+	 */
+	private boolean validateRetrieve(String[] fields) {
+		
+		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI]);
+		
+		return validate;
+	}
+	
+	/**
+	 * Validates a INFO message and returns whether it's valid.
+	 * 
+	 * @param fields the header fields
+	 * @return whether the INFO message is valid
+	 */
+	private boolean validateInfo(String[] fields) {
+		
+		boolean validate = validateVersion(fields[protocolVersionI]) && validateSenderID(fields[senderI])
+				&& validateHash(fields[hashI]) && validateChunkNo(fields[Peer.chunkTotalI]);
 		
 		return validate;
 	}

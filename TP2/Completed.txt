@@ -24,6 +24,10 @@ CHANGELOG
     - SECURITY
         - HMAC SHA256 to authenticate message and prevent tampering
         - AES-128 encrypt/decrypt of chunk data
+    - FAULT TOLERANCE
+        - restore/delete without original file
+            - RETRIEVE <version> <peerID> <filepath/filename>
+            - INFO <version> <peerID> <fileID> <filepath> <filename> <chunktotal>
 
 ---------------------
 RUNNING

@@ -99,6 +99,18 @@ public class SystemHandler implements Runnable {
 			
 			this.handleStarted(peer, state);
 			break;
+			
+		// Peer looking for fileID of given filepath/filename
+		case "RETRIEVE":
+			
+			this.handleRetrieve(peer, state);
+			break;
+			
+		// Peer response to RETRIEVE request
+		case "INFO":
+			
+			this.handleInfo(peer, state);
+			break;
 		}
 	}
 
@@ -376,5 +388,60 @@ public class SystemHandler implements Runnable {
 		for(String hash : filesToDelete) {
 			peer.getExecutor().submit(new DeleteProtocol(hash, senderID));
 		}
+	}
+
+	/**
+	 * Handles RETRIEVE protocol by checking the database in search of the received
+	 * file name or file path. Responds with file info if found.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @param state the Protocol State object relevant to this operation
+	 */
+	private void handleRetrieve(Peer peer, ProtocolState state) throws IOException {
+		
+	    // Check if this Peer is the Peer that requested the retrieval
+	    if(Integer.parseInt(state.getFields()[Peer.senderI]) == peer.getPeerID()) {
+	    	SystemManager.getInstance().logPrint("own RETRIEVE, ignoring", SystemManager.LogLevel.DEBUG);
+	    	return;
+	    }
+		
+		FileInfo fileInfo = peer.getDatabase().retrieveFileInfo(state.getFields()[Peer.fileI]);
+		
+		if(fileInfo == null) {
+	    	SystemManager.getInstance().logPrint("no info about this file", SystemManager.LogLevel.VERBOSE);
+	    	return;
+		}
+		
+		byte[] msg = state.getParser().createInfoMsg(peer.getPeerID(), peer.getProtocolVersion(), fileInfo);
+		peer.getMcc().send(msg);
+	}
+	
+	/**
+	 * Handles RETRIEVE protocol responses by setting the received
+	 * file info for using in a RESTORE/DELETE.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @param state the Protocol State object relevant to this operation
+	 */
+	private void handleInfo(Peer peer, ProtocolState state) {
+		
+		String key = peer.getPeerID() + state.getFields()[Peer.nameI] + ProtocolState.ProtocolType.RETRIEVE.name();
+		ProtocolState retrieveState = peer.getProtocols().get(key);
+		
+		// Find protocol by filename
+		if(retrieveState == null) {
+			key = peer.getPeerID() + state.getFields()[Peer.pathI] + ProtocolState.ProtocolType.RETRIEVE.name();
+			retrieveState = peer.getProtocols().get(key);
+			
+			// Find protocol by filepath
+			if(retrieveState == null) {
+				SystemManager.getInstance().logPrint("received INFO but no RETRIEVE protocol matched, key: " + key, SystemManager.LogLevel.DEBUG);
+		    	return;
+			}
+		}
+	
+		FileInfo fileInfo = new FileInfo(state.getFields()[Peer.pathI], state.getFields()[Peer.nameI], state.getFields()[Peer.hashI], Long.parseLong(state.getFields()[Peer.chunkTotalI]));
+		retrieveState.setFileInfo(fileInfo);
+		retrieveState.setRetrieveMsgResponded(true);
 	}
 }

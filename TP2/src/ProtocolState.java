@@ -14,7 +14,7 @@ import javax.xml.bind.DatatypeConverter;
 
 public class ProtocolState {
 	
-	public enum ProtocolType {NONE, BACKUP, RESTORE, DELETE, RECLAIM, CHUNK_STOP}
+	public enum ProtocolType {NONE, BACKUP, RESTORE, DELETE, RECLAIM, CHUNK_STOP, RETRIEVE}
 	
 	private static final int chunkSize = 64000;
 	private static final int maxChunkTotal = 1000001;
@@ -38,6 +38,8 @@ public class ProtocolState {
 	// Fields used for protocol logic
 	private boolean isChunkMsgAlreadySent = false;
 	private boolean isPutchunkMsgAlreadySent = false;
+	private boolean isRetrieveMsgResponded = false;
+	private FileInfo fileInfo;
 	private ConcurrentHashMap<Long, HashSet<Integer>> respondedID = new ConcurrentHashMap<Long, HashSet<Integer>>(8, 0.9f, 1);
 	private ConcurrentHashMap<Long, byte[]> restoredChunks = new ConcurrentHashMap<Long, byte[]>(8, 0.9f, 1);
 	
@@ -167,22 +169,16 @@ public class ProtocolState {
 	 * of the filename and metadata. Returns whether initialisation was successful.
 	 * 
 	 * @param protocolVersion the backup system version
-	 * @param filepath file path of the file to backup
+	 * @param fileInfo the database object containing file info
 	 */
-	public boolean initRestoreState(String protocolVersion, String filepath) throws NoSuchAlgorithmException, IOException {
+	public boolean initRestoreState(String protocolVersion, FileInfo fileInfo) throws NoSuchAlgorithmException, IOException {
 		
 		this.protocolVersion = protocolVersion;
-		this.filepath = filepath;
-		
-		// Get total number of chunks
-		this.chunkTotal = this.getTotalChunks(filepath);
-		if(this.chunkTotal > maxChunkTotal) return false;
+		this.filepath = fileInfo.getFilepath();
+		this.chunkTotal = fileInfo.getTotalChunks();
 		this.currentChunkNo = 0;
-		
-		// Compute SHA256 of given filename
-		File file = new File(filepath);
-		this.filename = file.getName();
-		this.hashHex = computeSHA256(filepath);
+		this.filename = fileInfo.getFilename();
+		this.hashHex = fileInfo.getFileID();
 
 		return true;
 	}
@@ -457,5 +453,33 @@ public class ProtocolState {
 	 */
 	public void setFinished(boolean isFinished) {
 		this.isFinished = isFinished;
+	}
+
+	/**
+	 * @return whether the response to a RETRIEVE message has been recorded
+	 */
+	public boolean isRetrieveMsgResponded() {
+		return isRetrieveMsgResponded;
+	}
+
+	/**
+	 * @param isRetrieveMsgResponded whether the response to a RETRIEVE message has been recorded
+	 */
+	public void setRetrieveMsgResponded(boolean isRetrieveMsgResponded) {
+		this.isRetrieveMsgResponded = isRetrieveMsgResponded;
+	}
+
+	/**
+	 * @return the file info object containing info about a backed up file
+	 */
+	public FileInfo getFileInfo() {
+		return fileInfo;
+	}
+
+	/**
+	 * @param fileInfo the file info object containing info about a backed up file to set
+	 */
+	public void setFileInfo(FileInfo fileInfo) {
+		this.fileInfo = fileInfo;
 	}
 }
