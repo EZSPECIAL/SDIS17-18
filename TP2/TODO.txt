@@ -1,8 +1,3 @@
-
-    - report
-    - delivery
-    - google form
-
 Problems
 
     - Not using Async I/O (java.nio.channels.AsynchronousFileChannel)
