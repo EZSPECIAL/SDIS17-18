@@ -104,6 +104,7 @@ public class Peer implements RMITesting {
 	 * @param mdbPort port for the multicast data backup channel
 	 * @param mdrAddr address of the multicast data restore channel
 	 * @param mdrPort port for the multicast data restore channel
+	 * @param pw the keystore password
 	 */
 	public void initPeer(String protocolVersion, int peerID, String accessPoint, InetAddress mccAddr, int mccPort, InetAddress mdbAddr, int mdbPort, InetAddress mdrAddr, int mdrPort, String pw) throws ClassNotFoundException, IOException, NoSuchAlgorithmException, CertificateException, KeyStoreException, UnrecoverableEntryException {
 		

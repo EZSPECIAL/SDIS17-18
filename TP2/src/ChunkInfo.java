@@ -52,7 +52,7 @@ public class ChunkInfo implements Serializable {
 	}
 
 	/**
-	 * @param the chunk ID to set
+	 * @param id the chunk ID to set
 	 */
 	public void setId(String id) {
 		this.id = id;

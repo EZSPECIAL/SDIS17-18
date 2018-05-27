@@ -19,8 +19,6 @@ public class BackupProtocolMsgLoop implements Runnable {
 	 * Sends the required PUTCHUNK messages for backing up a chunk and waits for the reception of repDeg STORED
 	 * messages in response to the PUTCHUNK.
 	 * 
-	 * @param peer the singleton Peer instance
-	 * @param state the Protocol State object relevant to this operation
 	 * @return whether enough responses were registered
 	 */
 	private boolean putchunkLoop() throws InterruptedException, IOException {

@@ -1,7 +1,5 @@
 
-    - delete even without original file
     - report
-    - javadoc
     - delivery
     - google form
 
@@ -13,5 +11,5 @@ Problems
     - DELETE ENH delete -> backup -> old delete deletes new backup if same file
     - RESTORE ENH multiple peers same file won't work, needs destination Peer on message
     - Could backup keystore between Peers
-    - Same peer/protocol/file isn't prevented
+    - Same peer/protocol/file isn't prevented, crashes
     - Database isn't backed up and fault tolerant

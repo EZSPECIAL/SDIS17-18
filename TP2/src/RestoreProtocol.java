@@ -157,13 +157,13 @@ public class RestoreProtocol implements Runnable {
 	 * Initialises the ProtocolState object relevant to this restore procedure.
 	 * 
 	 * @param peer the singleton Peer instance
-	 * @return the protocol key, null if unsuccessful
+	 * @return the protocol key
 	 */
 	private String initializeProtocolInstance(Peer peer) throws NoSuchAlgorithmException, IOException {
 		
 		ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.RESTORE, new ServiceMessage());
 		
-		if(!state.initRestoreState(peer.getProtocolVersion(), this.fileInfo)) return null;
+		state.initRestoreState(peer.getProtocolVersion(), this.fileInfo);
 		
 		String protocolKey = peer.getPeerID() + state.getHashHex() + state.getProtocolType().name();
 		peer.getProtocols().put(protocolKey, state);
@@ -176,7 +176,7 @@ public class RestoreProtocol implements Runnable {
 	 * Initialises the ProtocolState object relevant to this retrieve procedure.
 	 * 
 	 * @param peer the singleton Peer instance
-	 * @return the protocol key, null if unsuccessful
+	 * @return the protocol key
 	 */
 	private String initializeRetrieveProtocol(Peer peer) {
 		

@@ -48,6 +48,8 @@ public class ProtocolState {
 	/**
 	 * Constructs a ProtocolState object used only for its parsing and storage capabilities and not for tracking
 	 * the progress of a given ProtocolType.
+	 * 
+	 * @param parser the service message responsible for handling message for this protocol state
 	 */
 	public ProtocolState(ServiceMessage parser) {
 		this.parser = parser;
@@ -61,6 +63,7 @@ public class ProtocolState {
 	 * that handle each protocol type.
 	 * 
 	 * @param protocolType the protocol type
+	 * @param parser the service message responsible for handling message for this protocol state
 	 */
 	public ProtocolState(ProtocolType protocolType, ServiceMessage parser) {
 		this.protocolType = protocolType;
@@ -121,17 +124,14 @@ public class ProtocolState {
 	 * of the filename and metadata.
 	 * 
 	 * @param protocolVersion the backup system version
-	 * @param filepath file path of the file to delete
+	 * @param fileInfo the database object containing file info
 	 */
-	public void initDeleteState(String protocolVersion, String filepath) throws NoSuchAlgorithmException, IOException {
+	public void initDeleteState(String protocolVersion, FileInfo fileInfo) throws NoSuchAlgorithmException, IOException {
 		
 		this.protocolVersion = protocolVersion;
-		this.filepath = filepath;
-		
-		// Compute SHA256 of given filename
-		File file = new File(filepath);
-		this.filename = file.getName();
-		this.hashHex = computeSHA256(filepath);
+		this.filepath = fileInfo.getFilepath();
+		this.filename = fileInfo.getFilename();
+		this.hashHex = fileInfo.getFileID();
 		
 		// Create hash set of deletion confirmations
 		this.respondedID.put(0L, new HashSet<Integer>());
@@ -171,7 +171,7 @@ public class ProtocolState {
 	 * @param protocolVersion the backup system version
 	 * @param fileInfo the database object containing file info
 	 */
-	public boolean initRestoreState(String protocolVersion, FileInfo fileInfo) throws NoSuchAlgorithmException, IOException {
+	public void initRestoreState(String protocolVersion, FileInfo fileInfo) throws NoSuchAlgorithmException, IOException {
 		
 		this.protocolVersion = protocolVersion;
 		this.filepath = fileInfo.getFilepath();
@@ -179,8 +179,6 @@ public class ProtocolState {
 		this.currentChunkNo = 0;
 		this.filename = fileInfo.getFilename();
 		this.hashHex = fileInfo.getFileID();
-
-		return true;
 	}
 	
 	/**
@@ -219,6 +217,7 @@ public class ProtocolState {
 	 * @param protocolVersion the backup system version
 	 * @param hash textual representation of the hexadecimal values of a SHA256
 	 * @param chunkNo the chunk number relevant to this response procedure
+	 * @param filepath the file path
 	 * @param desiredRepDeg desired replication degree
 	 */
 	public void initReclaimState(String protocolVersion, String hash, String chunkNo, String filepath, int desiredRepDeg) {
@@ -386,14 +385,14 @@ public class ProtocolState {
 	}
 
 	/**
-	 * @param service message header fields to set
+	 * @param fields the service message header fields to set
 	 */
 	public void setFields(String[] fields) {
 		this.fields = fields;
 	}
 	
 	/**
-	 * @param the packet to set
+	 * @param packet the packet to set
 	 */
 	public void setPacket(DatagramPacket packet) {
 		this.packet = packet;
@@ -442,7 +441,7 @@ public class ProtocolState {
 	}
 	
 	/**
-	 * @param the hash map of currently stored chunks
+	 * @param restoredChunks the hash map of currently stored chunks
 	 */
 	public void setRestoredChunks(ConcurrentHashMap<Long, byte[]> restoredChunks) {
 		this.restoredChunks = restoredChunks;

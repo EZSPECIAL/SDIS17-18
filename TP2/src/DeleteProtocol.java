@@ -11,6 +11,7 @@ public class DeleteProtocol implements Runnable {
 	private boolean pendingDelete = false;
 	private String filepath;
 	private String hash;
+	private FileInfo fileInfo;
 	private int pendingPeerID;
 	private int attempts = 0;
 	
@@ -40,6 +41,39 @@ public class DeleteProtocol implements Runnable {
 
 		Thread.currentThread().setName("Delete " + Thread.currentThread().getId());
 		Peer peer = Peer.getInstance();
+		
+		this.fileInfo = peer.getDatabase().retrieveFileInfo(this.filepath);
+
+		// Peer is not the initiator, try to retrieve file info from other Peers
+		if(this.fileInfo == null) {
+			
+			String retrieveKey = this.initializeRetrieveProtocol(peer);
+			ProtocolState retrieveState = peer.getProtocols().get(retrieveKey);
+			
+			// Send request for file info
+			try {
+				byte[] msg = retrieveState.getParser().createRetrieveMsg(peer.getPeerID(), peer.getProtocolVersion(), this.filepath);
+				peer.getMcc().send(msg);
+			} catch(IOException e) {
+				SystemManager.getInstance().logPrint("I/O Exception retrieving info!", SystemManager.LogLevel.NORMAL);
+				e.printStackTrace();
+				return;
+			}
+			
+			// Wait for response
+			do {
+				if(Thread.interrupted()) {
+					SystemManager.getInstance().logPrint("could not retrieve file info, might not exist in the system", SystemManager.LogLevel.NORMAL);
+					return;
+				}
+
+			} while(!retrieveState.isRetrieveMsgResponded());
+			
+			this.fileInfo = retrieveState.getFileInfo();
+			
+			peer.getProtocols().remove(retrieveKey);
+			SystemManager.getInstance().logPrint("key removed: " + retrieveKey, SystemManager.LogLevel.VERBOSE);
+		}
 		
 		// Run protocol according to version
 		if(peer.getProtocolVersion().equals("1.0")) {
@@ -75,7 +109,7 @@ public class DeleteProtocol implements Runnable {
 		// Initialise protocol state for deleting file
 		ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.DELETE, new ServiceMessage());
 		try {
-			state.initDeleteState(peer.getProtocolVersion(), filepath);
+			state.initDeleteState(peer.getProtocolVersion(), this.fileInfo);
 		} catch(NoSuchAlgorithmException | IOException e) {
 			SystemManager.getInstance().logPrint("I/O Exception on delete protocol!", SystemManager.LogLevel.NORMAL);
 			e.printStackTrace();
@@ -206,7 +240,7 @@ public class DeleteProtocol implements Runnable {
 		
 		ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.DELETE, new ServiceMessage());
 		
-		state.initDeleteState(peer.getProtocolVersion(), filepath);
+		state.initDeleteState(peer.getProtocolVersion(), this.fileInfo);
 		
 		String protocolKey = peer.getPeerID() + state.getHashHex() + state.getProtocolType().name();
 		peer.getProtocols().put(protocolKey, state);
@@ -228,6 +262,23 @@ public class DeleteProtocol implements Runnable {
 		state.initPendingDeleteState(peer.getProtocolVersion(), this.hash);
 		
 		String protocolKey = peer.getPeerID() + state.getHashHex() + state.getProtocolType().name() + this.pendingPeerID;
+		peer.getProtocols().put(protocolKey, state);
+		
+		SystemManager.getInstance().logPrint("key inserted: " + protocolKey, SystemManager.LogLevel.VERBOSE);
+		return protocolKey;
+	}
+	
+	/**
+	 * Initialises the ProtocolState object relevant to this retrieve procedure.
+	 * 
+	 * @param peer the singleton Peer instance
+	 * @return the protocol key, null if unsuccessful
+	 */
+	private String initializeRetrieveProtocol(Peer peer) {
+		
+		ProtocolState state = new ProtocolState(ProtocolState.ProtocolType.RETRIEVE, new ServiceMessage());
+		
+		String protocolKey = peer.getPeerID() + this.filepath + state.getProtocolType().name();
 		peer.getProtocols().put(protocolKey, state);
 		
 		SystemManager.getInstance().logPrint("key inserted: " + protocolKey, SystemManager.LogLevel.VERBOSE);

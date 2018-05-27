@@ -190,7 +190,6 @@ public class StartPeer {
 	 * Prints error message and program usage. Exits program with error code -1.
 	 * 
 	 * @param message error message to print
-	 * @param protocol protocol being executed
 	 */
 	private static void cmdErr(String message) {
 		

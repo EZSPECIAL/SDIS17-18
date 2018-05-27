@@ -21,3 +21,4 @@ peer                    the singleton Peer instance
 size                    the size of the chunk in KB
 
 ks                      the keystore to use
+fileInfo                the database object containing file info

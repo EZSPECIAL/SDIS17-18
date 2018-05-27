@@ -16,6 +16,7 @@ public class FileInfo implements Serializable {
 	 * 
 	 * @param filepath the file path of the backed up file
 	 * @param fileID textual representation of the hexadecimal values of the SHA256 of the backed up file
+	 * @param totalChunks the total number of chunks of the file
 	 * @param desiredRepDeg desired replication degree
 	 */
 	public FileInfo(String filepath, String fileID, long totalChunks, int desiredRepDeg) {
