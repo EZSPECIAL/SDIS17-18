@@ -1,0 +1,34 @@
+Installation
+
+Run javac *.java on the source, and then start RMI Registry, TestApp and Peers where the .class files end up.
+
+File structure from SVN should be maintained for optimal program functionality. The following details the
+structure the program creates when running.
+
+Storage  - Peer storage area, folder created one level up from where the program runs
+Database - Peer's database backups, folder created one level up from where the program runs
+Restore  - Restored files, folder created one level up from where the program runs
+keystore - Java keystore for security implementation, file created one level up from where the program runs
+
+Usage
+
+java StartPeer <version> <id> <accessPoint> <mcc> <mdb> <mdr> <keystore_pass> [<logLevel> <logMethod>]
+
+version         - 1.0 or 1.1
+id              - non zero positive
+accesspoint     - remote object name (must be in "//host/name" or "name" format)
+mcc             - IP:port of multicast control channel
+mdb             - IP:port of multicast data backup channel
+mdr             - IP:port of multicast data restore channel
+keystore_pass   - keystore access password, if it doesn't exist it gets created with this password
+logLevel        - NONE, NORMAL, SERVICE_MSG, DEBUG, DATABASE, VERBOSE
+logMethod       - CONSOLE, FILE, BOTH
+
+The TestApp has no way of calling enhanced protocols, the given Peer version when calling StartPeer determines that.
+
+java TestApp <accessPoint> <protocol> <opnd1> <opnd2>
+
+accessPoint - remote object name (must be in "//host/name" or "name" format)
+protocol    - BACKUP, RESTORE, DELETE, RECLAIM, STATE
+opnd1       - pathname, max KB if RECLAIM, STATE has no operands
+opnd2       - repDeg if BACKUP
